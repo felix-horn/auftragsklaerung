@@ -1,0 +1,25 @@
+{
+  "name": "ai-engineering-course",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "extract": "tsx src/run.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "devDependencies": {
+    "@types/node": "^26.4.1",
+    "tsx": "4.23.13",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.49",
+    "ai": "^7.0.93",
+    "dotenv": "^17.4.2",
+    "zod": "^4.5.4"
+  }
+}
