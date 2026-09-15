@@ -28,13 +28,29 @@ const anthropic = createAnthropic({
   },
 });
 
-export async function extractEmail(emailText: string) {
+export type ExtractOptions = {
+  system?: string;
+  model?: string;
+  maxRetries?: number;
+};
+
+export async function extractEmail(
+  emailText: string,
+  opts: ExtractOptions = {},
+) {
+  const {
+    system = DEFAULT_SYSTEM,
+    model = "claude-sonnet-5",
+    maxRetries = 2,
+  } = opts;
   try {
     const { output, usage } = await generateText({
-      model: anthropic("claude-sonnet-5"),
+      model: anthropic(model),
       output: Output.object({ schema: emailExtractionSchema }),
       messages: [{ role: "user", content: `Email:\n${emailText}` }],
-      system: DEFAULT_SYSTEM,
+      system,
+      maxOutputTokens: 2000,
+      maxRetries,
     });
 
     console.log("Email text:", emailText);
