@@ -23,6 +23,7 @@ export const emailExtractionSchema = z.object({
           ),
       }),
     )
+    .min(1)
     .describe(
       "All distinct intents present in this email, each with a self-assessed confidence from 0 to 1. Most emails have exactly one. Use multiple entries only when the email genuinely contains separate requests that would be handled by different people, and you are confident each one is actually present. Do not include an intent with a confidence below 0.5 — omit marginal or hedged intents entirely rather than listing them with low confidence. 'cancellation' means the customer wants an existing order cancelled or withdrawn, not a question about its status. 'document_request' means the customer is asking us to send or resend a document — an Auftragsbestätigung, catalogue, certificate, delivery note or a copy of an invoice. A request for a document is 'document_request' even when it concerns an invoice; 'invoice_question' is only for questions about the content or correctness of an invoice. 'other' means a genuine request that does not fit any category above, for example an administrative change such as updating stored master data. Use it only for real requests that fall outside the taxonomy, never as a hedge when unsure which category applies. It may appear alongside another intent when an email contains both a classifiable and an unclassifiable request. Never return an empty array.",
     ),
