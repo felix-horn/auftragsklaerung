@@ -36,6 +36,10 @@ German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
   model.
 - Golden eval labels derive from docs/POLICY.md (Module 3), never from the system
   prompt. Rewording a prompt must not be able to move a label.
+- After changing DEFAULT_SYSTEM, schema.ts, or any generateText parameter: run
+  `DUMP_REQUEST_BODY=docs/request-body-reference.json npm run dump`, then
+  `git diff docs/request-body-reference.json`. Commit the regenerated reference in
+  the same commit as the change that moved it. An unexpected diff means stop.
 
 ## Observed numbers (20-email set, module-2 tag)
 - Input: ~1890–2000 tokens per email
