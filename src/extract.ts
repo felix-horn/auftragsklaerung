@@ -26,7 +26,7 @@ export async function extractEmail(emailText: string) {
     const { output, usage } = await generateText({
       model: anthropic("claude-sonnet-5"),
       output: Output.object({ schema: emailExtractionSchema }),
-      prompt: `Email:\n${emailText}`,
+      messages: [{ role: "user", content: `Email:\n${emailText}` }],
       system: `
         You extract structured data from incoming customer emails for a German industrial parts supplier. Senders are B2B trade customers.
         Rules:
