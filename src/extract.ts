@@ -5,13 +5,17 @@ import {
   NoOutputGeneratedError,
 } from "ai";
 import { createAnthropic } from "@ai-sdk/anthropic";
+import { writeFile } from "node:fs/promises";
 import { emailExtractionSchema } from "./schema.js";
 
 const anthropic = createAnthropic({
   fetch: async (url, options) => {
-    if (process.env.LOG_REQUEST_BODY === "1") {
-      console.log("--- Request body ---");
-      console.log(JSON.stringify(JSON.parse(options?.body as string), null, 2));
+    if (process.env.DUMP_REQUEST_BODY) {
+      const parsedBody = JSON.parse(options?.body as string);
+      await writeFile(
+        process.env.DUMP_REQUEST_BODY,
+        JSON.stringify(parsedBody, null, 2),
+      );
     }
     return fetch(url, options);
   },
