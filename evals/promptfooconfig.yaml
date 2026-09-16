@@ -1,0 +1,29 @@
+description: promptfoo mechanics, no model involved
+
+providers:
+  - id: file://providers/echo.ts
+
+prompts:
+  - '{{text}}'
+
+tests:
+  - description: uppercases the input
+    vars:
+      text: bestellung 61150
+    assert:
+      - type: contains
+        value: BESTELLUNG
+
+  - description: deliberately fails
+    vars:
+      text: bestellung 61150
+    assert:
+      - type: contains
+        value: bestellung
+
+  - description: javascript assertion over the output
+    vars:
+      text: bestellung 61150
+    assert:
+      - type: javascript
+        value: output.split(' ').length === 2
