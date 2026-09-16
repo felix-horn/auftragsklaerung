@@ -4,9 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "dump": "tsx src/dump-body.ts",
+    "eval": "PROMPTFOO_DISABLE_TELEMETRY=1 promptfoo eval --config evals/promptfooconfig.yaml --no-cache",
     "extract": "tsx src/run.ts",
-    "dump": "tsx src/dump-body.ts"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
