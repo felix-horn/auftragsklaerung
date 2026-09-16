@@ -8,9 +8,8 @@ German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
 - Structured output on Anthropic goes via `output_config.format.schema`. Not a
   synthetic tool, not `tools`/`tool_choice`. Verified by dumping the request body;
   see docs/request-body-reference.json.
-- AI SDK 6: `generateText` + `output: Output.object()`. `generateObject` is deprecated
-  and does not auto-retry on validation failure. Failures throw
-  `NoObjectGeneratedError`.
+- AI SDK 7 (`ai@7`, `@ai-sdk/anthropic@4`): `generateText` + `output: Output.object()`.
+  No auto-retry on validation failure — failures throw `NoObjectGeneratedError`.
 - Zod constraints beyond type and enum do not survive into the emitted JSON Schema.
   `.min()`/`.max()` are demoted to prose inside `description` (verified twice:
   `confidence` bounds, `intents` minItems). `.refine()` cannot be expressed at all.

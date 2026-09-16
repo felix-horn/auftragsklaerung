@@ -14,13 +14,19 @@
   "type": "module",
   "devDependencies": {
     "@types/node": "^26.4.1",
+    "promptfoo": "0.123.0",
     "tsx": "4.23.13",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vitest": "5.0.1"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^4.0.49",
-    "ai": "^7.0.93",
+    "@ai-sdk/anthropic": "4.0.49",
+    "ai": "7.0.93",
     "dotenv": "^17.4.2",
-    "zod": "^4.5.4"
+    "zod": "4.5.4"
+  },
+  "allowScripts": {
+    "@playwright/browser-chromium": false,
+    "onnxruntime-node": false
   }
 }
