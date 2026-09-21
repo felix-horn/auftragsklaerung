@@ -59,6 +59,9 @@ against the baseline.
 - Sender premise: remove the claim in DEFAULT_SYSTEM that all senders are
   customers. Target: E-19.
 - Field rename: `requestedAction` → `requestStated`. Target: E-14.
+- Null example: the `requestedAction` description gives "pure venting" as its
+  null example; E-14 is a calm factual complaint. Replace the example. Target:
+  E-14. Run separately from the rename.
 - Injection line: run with and without the embedded-instruction rule in
   DEFAULT_SYSTEM. Target: E-17.
 - Confidence threshold: move the 0.5 cut from schema prose into code. Needs
@@ -67,9 +70,22 @@ against the baseline.
 
 ## Deferred design questions
 - R-09 prefix classification as a pure function (3.4): the model extracts
-  identifiers as written, code decides which array they belong in.
+  identifiers as written, code decides which array they belong in. Changes the
+  system under test — measure before and after wiring it in.
+- Deadline normaliser (3.4): its job is string tolerance ("bis Freitag" =
+  "Bis Freitag."). Calendar resolution is impossible: the emails carry no sent
+  date, and POLICY R-12 anchors deadlines to the time of writing.
+- Assertion coverage (3.6): map each POLICY rule to the assertion that checks
+  it. R-02 (German free text) currently has none, because `requestedAction` is
+  only asserted null vs non-null.
 - `other` used as a hedge (E-16, E-17): sharpen prose, remove the enum value,
-  or require a justification field. Module 6.
+  or require a justification field. After 3.6.
 - Split "does this belong in the queue" from "what does the customer want"
   into two fields. After 3.6.
+- Golden set size: 22 cases in Module 3. Expand when statistical resolution
+  is needed (Module 5 onward), not before.
+- Unprefixed identifiers recorded as written (R-09 step 2) get normalised at
+  the ERP lookup. Module 4.
+- Reply drafting is Module 5b (added to the roadmap in 3.1). The LLM-as-judge
+  eval for drafts and the reply-language decision go with it.
 - Does `requestedAction` earn its place in the approval queue UI? Module 7.
