@@ -1,6 +1,6 @@
 # Auftragsklärung — Fachliche Regeln
 
-**Version:** v1.0
+**Version:** v1.1
 **Stand:** 21.09.2026
 
 ## Zweck dieses Dokuments
@@ -546,6 +546,11 @@ Bewusst nicht geregelt, jeweils mit Begründung.
   zugesagte Termin im Auftragsbestand steht und dort zuverlässiger geprüft
   werden kann. Die Ableitung gehört in die Auswertung der Auftragsdaten.
 
+- **Stornierungen vor dem Versand.** Eine Stornierung ist fachlich
+  dringender, solange die Ware noch nicht versandt ist. Nach R-13 beeinflusst
+  die Kategorie die Dringlichkeit nicht. Der Versandstatus steht im
+  Auftragsbestand und wird dort geprüft, nicht aus der Nachricht abgeleitet.
+
 - **Nähe einer Frist.** Eine Frist hebt die Dringlichkeit auf mittel,
   unabhängig davon, ob sie morgen oder in drei Monaten abläuft. Eine
   Abstufung nach Nähe setzt voraus, dass Fristen in ein Kalenderdatum
@@ -559,6 +564,17 @@ Bewusst nicht geregelt, jeweils mit Begründung.
 - **Privatpersonen.** Wir beliefern ausschließlich Geschäftskunden. Wie
   Nachrichten von Privatpersonen zu bewerten sind, ist nicht geregelt.
 
+- **Automatische Antworten.** Abwesenheitsnotizen, Zustellbenachrichtigungen
+  und andere automatisch erzeugte Nachrichten sind weder Kundenkorrespondenz
+  noch Werbung. Es gibt keine passende Kategorie. Zurückgestellt; es existiert
+  kein Testfall.
+
+- **Nachrichten ohne Anliegen.** Bedankt sich ein Kunde nur oder bestätigt er
+  eine Information, ohne etwas zu verlangen, enthält die Nachricht kein
+  Anliegen. R-04 setzt jedoch mindestens ein Anliegen voraus, und Sonstiges
+  verlangt ein echtes Anliegen. Solche Nachrichten sind derzeit nicht
+  einzuordnen. Zurückgestellt; es existiert kein Testfall.
+
 ---
 
 ## Änderungshistorie
@@ -566,3 +582,4 @@ Bewusst nicht geregelt, jeweils mit Begründung.
 | Version | Datum | Änderung |
 |---|---|---|
 | v1.0 | 21.09.2026 | Erstfassung |
+| v1.1 | 21.09.2026 | Bekannte Lücken ergänzt: Stornierungen vor dem Versand, automatische Antworten, Nachrichten ohne Anliegen. Keine Bewertung betroffen. |
