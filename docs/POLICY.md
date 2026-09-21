@@ -2,7 +2,7 @@
 
 **Version:** v1.0
 **Stand:** 21.09.2026
-**Status:** Entwurf — R-13 offen
+**Status:** Entwurf — Bestätigung von R-13 ausstehend
 
 ## Zweck dieses Dokuments
 
@@ -482,12 +482,49 @@ nicht aus der Nachricht übernommen.
 
 ### R-13 — Dringlichkeit
 
-*Offen.* Diese Regel legt fest, wann eine Nachricht hohe, mittlere oder
-niedrige Dringlichkeit hat, abgeleitet aus Eskalationsmerkmalen (R-10, R-11)
-und Fristen (R-12). Sie wird noch ausgearbeitet. Solange sie offen ist, wird
-keine Dringlichkeit bewertet.
+Jede Nachricht erhält eine von drei Dringlichkeitsstufen. Maßgeblich sind
+ausschließlich Eskalationsmerkmale (R-10, R-11) und Fristen (R-12). Es gilt
+die höchste zutreffende Stufe.
 
-**Seit:** —
+**Hoch** — die Nachricht enthält mindestens eines dieser Merkmale:
+
+- Produktionsstillstand
+- angekündigte rechtliche Schritte
+- angedrohte Stornierung
+
+**Mittel** — keines der obigen Merkmale, aber mindestens eines davon:
+
+- eine Frist (R-12)
+- wiederholte Kontaktaufnahme
+
+**Niedrig** — alle übrigen Nachrichten.
+
+Merkmale addieren sich nicht. Eine wiederholte Kontaktaufnahme mit Frist
+bleibt mittel; hoch wird eine Nachricht nur durch eines der drei Merkmale der
+obersten Stufe.
+
+Die Kategorie beeinflusst die Dringlichkeit nicht. Eine Reklamation ohne
+Eskalationsmerkmal und ohne Frist ist niedrig, eine Dokumentenanforderung mit
+Frist ist mittel.
+
+Beispiele:
+
+- „Unsere Montagelinie steht deshalb seit Montag still.“ — Hoch.
+- „Das ist jetzt die dritte Mail … ich brauche das bis morgen geklärt, sonst
+  storniere ich den nächsten Auftrag.“ — Hoch. Die angedrohte Stornierung
+  entscheidet; Frist und wiederholte Kontaktaufnahme ändern daran nichts.
+- „Bitte bestätigen Sie die Stornierung bis Freitag.“ — Mittel.
+- „Ich hatte bereits vergangene Woche angefragt …“, ohne Frist — Mittel.
+- „SEHR DRINGEND!!! Bitte schicken Sie mir den Katalog.“ — Niedrig (R-10).
+
+**Begründung:** Die oberste Stufe erfasst Lagen, in denen dem Kunden oder der
+Geschäftsbeziehung ein Schaden unmittelbar droht oder bereits eingetreten
+ist. Die mittlere Stufe erfasst Nachrichten, bei denen der Kunde eine
+Reaktion zu einem bestimmten Zeitpunkt erwartet oder bereits vergeblich
+gewartet hat. Die Stufen sind bewusst einfach gehalten: jede Einstufung lässt
+sich an einem einzelnen, ausdrücklich genannten Merkmal nachprüfen.
+
+**Seit:** v1.0
 
 ---
 
@@ -510,6 +547,11 @@ Bewusst nicht geregelt, jeweils mit Begründung.
   zugesagte Termin im Auftragsbestand steht und dort zuverlässiger geprüft
   werden kann. Die Ableitung gehört in die Auswertung der Auftragsdaten.
 
+- **Nähe einer Frist.** Eine Frist hebt die Dringlichkeit auf mittel,
+  unabhängig davon, ob sie morgen oder in drei Monaten abläuft. Eine
+  Abstufung nach Nähe setzt voraus, dass Fristen in ein Kalenderdatum
+  umgerechnet werden; das ist zurückgestellt.
+
 - **Beschwerden ohne gewünschte Maßnahme.** Wie auf eine Beschwerde reagiert
   wird, in der der Kunde keine Maßnahme verlangt — etwa mit einem proaktiven
   Angebot —, regelt dieses Dokument nicht. Das betrifft die Formulierung der
@@ -524,4 +566,4 @@ Bewusst nicht geregelt, jeweils mit Begründung.
 
 | Version | Datum | Änderung |
 |---|---|---|
-| v1.0 | 21.09.2026 | Erstfassung (Entwurf, R-13 offen) |
+| v1.0 | 21.09.2026 | Erstfassung |
