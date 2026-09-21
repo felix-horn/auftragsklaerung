@@ -2,7 +2,6 @@
 
 **Version:** v1.0
 **Stand:** 21.09.2026
-**Status:** Entwurf — Bestätigung von R-13 ausstehend
 
 ## Zweck dieses Dokuments
 
