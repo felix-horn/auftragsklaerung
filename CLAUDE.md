@@ -39,6 +39,9 @@ German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
   `DUMP_REQUEST_BODY=docs/request-body-reference.json npm run dump`, then
   `git diff docs/request-body-reference.json`. Commit the regenerated reference in
   the same commit as the change that moved it. An unexpected diff means stop.
+  - Business rules live in docs/POLICY.md. A change that would move a golden label
+  is a policy change: amend POLICY.md first, with a version bump, then the
+  implementation. Never the reverse.
 
 ## Observed numbers (20-email set, module-2 tag)
 - Input: ~1890–2000 tokens per email
@@ -47,5 +50,26 @@ German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
 - All 20 schema-valid
 
 ## Commands
-- `npm run extract` — runs the 20-email test set (src/run.ts)
+- `npm run extract` — runs the 21-email test set (src/run.ts)
 - `DUMP_REQUEST_BODY=<path> npm run dump` — one API call, writes the exact wire payload
+
+## Open experiments
+Run once the eval harness exists (after 3.6). Each changes one thing; compare
+against the baseline.
+- Sender premise: remove the claim in DEFAULT_SYSTEM that all senders are
+  customers. Target: E-19.
+- Field rename: `requestedAction` → `requestStated`. Target: E-14.
+- Injection line: run with and without the embedded-instruction rule in
+  DEFAULT_SYSTEM. Target: E-17.
+- Confidence threshold: move the 0.5 cut from schema prose into code. Needs
+  3.7 calibration data first.
+- Prompt language: German DEFAULT_SYSTEM against the English one. Whole set.
+
+## Deferred design questions
+- R-09 prefix classification as a pure function (3.4): the model extracts
+  identifiers as written, code decides which array they belong in.
+- `other` used as a hedge (E-16, E-17): sharpen prose, remove the enum value,
+  or require a justification field. Module 6.
+- Split "does this belong in the queue" from "what does the customer want"
+  into two fields. After 3.6.
+- Does `requestedAction` earn its place in the approval queue UI? Module 7.
