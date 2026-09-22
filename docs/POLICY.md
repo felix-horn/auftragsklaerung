@@ -1,7 +1,7 @@
 # Auftragsklärung — Fachliche Regeln
 
-**Version:** v1.1
-**Stand:** 21.09.2026
+**Version:** v1.2
+**Stand:** 22.09.2026
 
 ## Zweck dieses Dokuments
 
@@ -79,6 +79,9 @@ in eigenen Worten zusammengefasst (R-06). Nicht zu verwechseln mit dem
 Anliegen: das Anliegen ordnet die Nachricht einer Kategorie zu, die gewünschte
 Maßnahme beschreibt, was konkret getan werden soll.
 
+**Angebotsanfrage** — die Bitte um ein Angebot. Sie ist ein Anliegen der
+Kategorie Kaufanfrage; nicht jede Kaufanfrage ist eine Angebotsanfrage.
+
 ---
 
 ## Kategorien
@@ -96,9 +99,9 @@ nur, wenn sie nach R-04 mehrere Anliegen enthält.
   Gutschrift oder Erstattung. Nicht: Beanstandungen einer Rechnung
   (→ Rechnungsfrage).
 
-- **Neuanfrage** — Ein Kunde oder Interessent möchte bei uns kaufen oder
+- **Kaufanfrage** — Ein Kunde oder Interessent möchte bei uns kaufen oder
   erkundigt sich vor einem möglichen Kauf nach Preisen, Rabatten, Konditionen
-  oder Lieferbedingungen. Dazu gehört die Bitte um ein Angebot.
+  oder Lieferbedingungen. Dazu gehört die Angebotsanfrage.
 
 - **Rechnungsfrage** — Der Kunde stellt Inhalt, Richtigkeit oder Fälligkeit
   einer Rechnung in Frage. Nicht: die Bitte um Zusendung einer vorhandenen
@@ -212,7 +215,7 @@ Beispiele:
 
 - „Die gelieferten Dichtungen zu Bestellung A-47190 waren leider beschädigt,
   das müssen wir reklamieren. Außerdem bräuchten wir ein Angebot für 200 Stück
-  Sechskantschrauben M12.“ — Zwei Anliegen: Reklamation und Neuanfrage. Die
+  Sechskantschrauben M12.“ — Zwei Anliegen: Reklamation und Kaufanfrage. Die
   Punkte hängen nicht zusammen; eine Antwort nur zur Reklamation ließe die
   Anfrage offen.
 
@@ -583,3 +586,4 @@ Bewusst nicht geregelt, jeweils mit Begründung.
 |---|---|---|
 | v1.0 | 21.09.2026 | Erstfassung |
 | v1.1 | 21.09.2026 | Bekannte Lücken ergänzt: Stornierungen vor dem Versand, automatische Antworten, Nachrichten ohne Anliegen. Keine Bewertung betroffen. |
+| v1.2 | 22.09.2026 | Kategorie Neuanfrage in Kaufanfrage umbenannt; der Name legte fälschlich einen Neukunden nahe. Begriff Angebotsanfrage ergänzt. Keine Bewertung betroffen. |

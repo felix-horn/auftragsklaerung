@@ -7,7 +7,7 @@ export const emailExtractionSchema = z.object({
         type: z.enum([
           "order_status",
           "complaint",
-          "new_inquiry",
+          "purchase_inquiry",
           "invoice_question",
           "cancellation",
           "document_request",

@@ -89,3 +89,8 @@ against the baseline.
 - Reply drafting is Module 5b (added to the roadmap in 3.1). The LLM-as-judge
   eval for drafts and the reply-language decision go with it.
 - Does `requestedAction` earn its place in the approval queue UI? Module 7.
+- `src/run.ts` comments are the 3.1 readings and still say `new_inquiry`
+  (renamed to `purchase_inquiry` in POLICY v1.2). Read them as
+  `purchase_inquiry`. Left unchanged on purpose: they are the third reading
+  in 3.3 step 4 and must not be edited or displayed before the golden set is
+  labelled. They go away when run.ts imports its emails from the golden set.
