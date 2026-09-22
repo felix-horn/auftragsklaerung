@@ -65,6 +65,9 @@ const testEmails = [
 
   // 21 — intent: order_status | ids: K-62418, called "Bestellnummer" by the customer → customerNumbers only (R-09 step 1: prefix beats label) | urgency: low | prefix/label conflict
   `Guten Tag, zu unserer Bestellnummer K-62418 hätte ich gern den aktuellen Lieferstatus. Vielen Dank, B. Keller, Keller Antriebstechnik`,
+
+  // 22 — R-05 main case: request to send an existing invoice | single-purpose: no "noch einmal", nothing about invoice content, no deadline, no order or customer number | labels deliberately not stated here — they come from the golden set (3.3)
+  `Guten Tag, bitte schicken Sie uns die Rechnung 2024-6093 als PDF zu. Mit freundlichen Grüßen, L. Petersen, Petersen Hydraulik GmbH`,
 ];
 
 let failures = 0;
