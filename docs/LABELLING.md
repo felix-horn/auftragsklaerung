@@ -192,7 +192,7 @@ mittleren Stufe, und Merkmale addieren sich nicht (R-13).
 ### `policyVersion`
 
 Die Version von POLICY.md, gegen die der Fall zuletzt geprüft wurde, etwa
-`"v1.1"`. Wird ein Fall nach einer Änderung von POLICY.md erneut geprüft,
+`"v1.2"`. Wird ein Fall nach einer Änderung von POLICY.md erneut geprüft,
 wird die Version angehoben, auch wenn sich kein Label ändert.
 
 ### `notes`

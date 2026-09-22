@@ -1,0 +1,74 @@
+import { z } from "zod";
+import { emailExtractionSchema } from "../schema.js";
+
+// Code values come from the extraction schema, so they cannot drift apart:
+// rename a value there, and every label still using the old one fails to load.
+const intentType = emailExtractionSchema.shape.intents.element.shape.type;
+const escalationSignal = emailExtractionSchema.shape.escalationSignals.element;
+
+const noDuplicates = (items: string[]) => new Set(items).size === items.length;
+
+// One golden case's correct answers. Conventions: docs/LABELLING.md.
+export const goldenLabelsSchema = z
+  .strictObject({
+    intents: z
+      .array(intentType)
+      .min(1, { error: "at least one Anliegen (R-04)" })
+      .refine(noDuplicates, { error: "duplicate code value" }),
+    requestedAction: z.string().min(1).nullable(),
+    orderNumbers: z
+      .array(z.string().min(1))
+      .refine(noDuplicates, { error: "duplicate number" }),
+    customerNumbers: z
+      .array(z.string().min(1))
+      .refine(noDuplicates, { error: "duplicate number" }),
+    escalationSignals: z
+      .array(escalationSignal)
+      .refine(noDuplicates, { error: "duplicate code value" }),
+    deadlineStated: z.string().min(1).nullable(),
+    urgency: z.enum(["low", "medium", "high"]),
+  })
+  .refine(
+    (l) => !(l.intents.includes("spam") && l.requestedAction !== null),
+    {
+      error: "Werbung has no gewünschte Maßnahme (R-07)",
+      path: ["requestedAction"],
+    },
+  );
+
+export const goldenCaseSchema = z
+  .strictObject({
+    id: z.string().regex(/^E-\d{2}$/),
+    email: z.string().min(1),
+    // null = not yet labelled. Labels and policyVersion are set together.
+    policyVersion: z.string().regex(/^v\d+\.\d+$/).nullable(),
+    labels: goldenLabelsSchema.nullable(),
+    notes: z.partialRecord(goldenLabelsSchema.keyof(), z.string().min(1)).optional(),
+  })
+  .refine((c) => (c.labels === null) === (c.policyVersion === null), {
+    error: "labels and policyVersion are set together",
+    path: ["policyVersion"],
+  });
+
+export type GoldenCaseInput = z.input<typeof goldenCaseSchema>;
+export type GoldenCase = z.output<typeof goldenCaseSchema>;
+
+// Validates every case and reports problems by case id, not by array index.
+export function parseGoldenSet(rawCases: GoldenCaseInput[]): GoldenCase[] {
+  const problems: string[] = [];
+  const cases: GoldenCase[] = [];
+
+  for (const raw of rawCases) {
+    const result = goldenCaseSchema.safeParse(raw);
+    if (result.success) cases.push(result.data);
+    else problems.push(`${raw.id}:\n${z.prettifyError(result.error)}`);
+  }
+
+  const ids = rawCases.map((c) => c.id);
+  if (!noDuplicates(ids)) problems.push("duplicate id");
+
+  if (problems.length > 0) {
+    throw new Error(`Golden set invalid:\n\n${problems.join("\n\n")}`);
+  }
+  return cases;
+}

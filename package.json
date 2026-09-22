@@ -7,6 +7,7 @@
     "dump": "tsx src/dump-body.ts",
     "eval": "PROMPTFOO_DISABLE_TELEMETRY=1 promptfoo eval --config evals/promptfooconfig.yaml --no-cache",
     "extract": "tsx src/run.ts",
+    "golden:check": "tsx src/golden/check.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
