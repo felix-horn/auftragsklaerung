@@ -42,6 +42,11 @@ German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
 - Business rules live in docs/POLICY.md. A change that would move a golden label
   is a policy change: amend POLICY.md first, with a version bump, then the
   implementation. Never the reverse.
+- Code values live in two places that nothing links: the enums in
+  src/schema.ts and the mapping tables in docs/LABELLING.md (section
+  Zuordnung). After renaming an enum value, update LABELLING.md by hand.
+  src/golden/cases.ts needs no reminder: it imports the enums and fails to
+  load on a stale value.
 
 ## Observed numbers (20-email set, module-2 tag)
 - Input: ~1890–2000 tokens per email
@@ -98,11 +103,27 @@ against the baseline.
 
 ## Golden set (Module 3.3)
 - 22 cases in src/golden/cases.ts, labelled from docs/POLICY.md alone.
-- Second annotator: Gemini in AI Studio, given only POLICY.md, LABELLING.md and
-  the email texts. Agreement with the human annotator before reconciliation:
-  96.1% (148/154 field comparisons); intents 19/22, requestedAction 21/22,
-  orderNumbers 21/22, customerNumbers 21/22, escalationSignals, deadlineStated
-  and urgency 22/22. After reconciliation it is 100% by construction and says
-  nothing.
-- Every difference was resolved against POLICY.md; three of them led to policy
-  changes (v1.2, v1.3).
+- Second annotator: Gemini in AI Studio (model gemini-pro-latest, which
+  pointed to gemini-3.1-pro-preview at the time; thinking level high), fresh
+  session, given only POLICY.md (v1.2), LABELLING.md and the email texts.
+  Agreement with the human annotator before reconciliation: 96.1% (148/154
+  field comparisons); intents 19/22, requestedAction 21/22 (compared present
+  vs null), orderNumbers 21/22, customerNumbers 21/22, escalationSignals,
+  deadlineStated and urgency 22/22. After reconciliation it is 100% by
+  construction and says nothing.
+- Every difference was resolved against POLICY.md. One of them (E-16) led
+  to a policy clarification (v1.3). v1.2, the Kaufanfrage rename, came
+  earlier, from reviewing LABELLING.md.
+- The second annotator marked E-12 as uncertain: the demanded Gutschrift
+  reads like Reklamation, but Reklamation excludes complaints about an
+  invoice. Both annotators labelled `invoice_question`. Likely blur case in
+  3.6.
+- Expected baseline failures, written down before the first run on this
+  set so that 3.6 can tell expected from surprising ones.
+  Seen in earlier runs: E-14 invents a requestedAction (label: null);
+  E-16 and E-17 add `other` as a hedge.
+  Possible under the policy, not yet seen: E-16 adds `complaint` or
+  `document_request` and E-18 adds `order_status` (labels: one intent each;
+  R-04, POLICY v1.3); E-07 puts the bare 78432 into an array (label: both
+  empty, R-09 step 3); E-21 puts K-62418 into orderNumbers because the
+  customer calls it "Bestellnummer" (label: customerNumbers, R-09 step 1).

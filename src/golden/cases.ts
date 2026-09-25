@@ -28,7 +28,7 @@ const rawCases: GoldenCaseInput[] = [
     labels: 
       {
       intents: ["complaint"],
-      requestedAction: "fehlende Dichtung zu Bestellung zuordnen und Reklamation bearbeiten",
+      requestedAction: "fehlende Dichtung zu Bestellung zuordnen; Reklamation bearbeiten",
       orderNumbers: ["A-55210", "A-55231"],
       customerNumbers: [],
       escalationSignals: [],
@@ -61,7 +61,7 @@ const rawCases: GoldenCaseInput[] = [
     labels: 
       {
       intents: ["invoice_question"],
-      requestedAction: "Abweichung zwischen Rechnnungsbetrag und Auftragsbestätigung prüfen",
+      requestedAction: "Abweichung zwischen Rechnungsbetrag und Auftragsbestätigung prüfen",
       orderNumbers: [],
       customerNumbers: [],
       escalationSignals: ["repeat_contact", "threat_to_cancel"],
@@ -125,7 +125,7 @@ const rawCases: GoldenCaseInput[] = [
     labels: 
       {
       intents: ["cancellation"],
-      requestedAction: "Bestellung stornieren und Stornierung bestätigen",
+      requestedAction: "Bestellung stornieren; Stornierung bestätigen",
       orderNumbers: ["A-52880"],
       customerNumbers: ["66017"],
       escalationSignals: [],
