@@ -39,7 +39,7 @@ German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
   `DUMP_REQUEST_BODY=docs/request-body-reference.json npm run dump`, then
   `git diff docs/request-body-reference.json`. Commit the regenerated reference in
   the same commit as the change that moved it. An unexpected diff means stop.
-  - Business rules live in docs/POLICY.md. A change that would move a golden label
+- Business rules live in docs/POLICY.md. A change that would move a golden label
   is a policy change: amend POLICY.md first, with a version bump, then the
   implementation. Never the reverse.
 
@@ -50,7 +50,8 @@ German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
 - All 20 schema-valid
 
 ## Commands
-- `npm run extract` — runs the 21-email test set (src/run.ts)
+- `npm run extract` — runs the 22 golden-set emails (src/golden/cases.ts) through the extractor
+- `npm run golden:check` — validates the golden set and reports how many cases are labelled
 - `DUMP_REQUEST_BODY=<path> npm run dump` — one API call, writes the exact wire payload
 
 ## Open experiments
@@ -89,8 +90,19 @@ against the baseline.
 - Reply drafting is Module 5b (added to the roadmap in 3.1). The LLM-as-judge
   eval for drafts and the reply-language decision go with it.
 - Does `requestedAction` earn its place in the approval queue UI? Module 7.
-- `src/run.ts` comments are the 3.1 readings and still say `new_inquiry`
-  (renamed to `purchase_inquiry` in POLICY v1.2). Read them as
-  `purchase_inquiry`. Left unchanged on purpose: they are the third reading
-  in 3.3 step 4 and must not be edited or displayed before the golden set is
-  labelled. They go away when run.ts imports its emails from the golden set.
+- POLICY.md's examples are taken from the golden-set emails. So POLICY.md, or
+  any excerpt of it, must never be put into the prompt: the eval would then
+  measure how well the model repeats examples it was shown, not how it handles
+  new emails. If the policy is ever to be used as prompt material, the golden
+  set needs fresh emails first.
+
+## Golden set (Module 3.3)
+- 22 cases in src/golden/cases.ts, labelled from docs/POLICY.md alone.
+- Second annotator: Gemini in AI Studio, given only POLICY.md, LABELLING.md and
+  the email texts. Agreement with the human annotator before reconciliation:
+  96.1% (148/154 field comparisons); intents 19/22, requestedAction 21/22,
+  orderNumbers 21/22, customerNumbers 21/22, escalationSignals, deadlineStated
+  and urgency 22/22. After reconciliation it is 100% by construction and says
+  nothing.
+- Every difference was resolved against POLICY.md; three of them led to policy
+  changes (v1.2, v1.3).

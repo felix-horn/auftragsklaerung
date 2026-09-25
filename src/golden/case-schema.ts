@@ -48,6 +48,27 @@ export const goldenCaseSchema = z
   .refine((c) => (c.labels === null) === (c.policyVersion === null), {
     error: "labels and policyVersion are set together",
     path: ["policyVersion"],
+  })
+  // R-02: numbers and deadlines are recorded in the wording of the email,
+  // so every such value has to occur in the email text.
+  .superRefine((c, ctx) => {
+    if (c.labels === null) return;
+    const verbatim = [
+      ["orderNumbers", c.labels.orderNumbers],
+      ["customerNumbers", c.labels.customerNumbers],
+      ["deadlineStated", c.labels.deadlineStated === null ? [] : [c.labels.deadlineStated]],
+    ] as const;
+
+    for (const [field, values] of verbatim) {
+      values.forEach((value, index) => {
+        if (c.email.includes(value)) return;
+        ctx.addIssue({
+          code: "custom",
+          message: `"${value}" does not occur in the email (R-02)`,
+          path: field === "deadlineStated" ? ["labels", field] : ["labels", field, index],
+        });
+      });
+    }
   });
 
 export type GoldenCaseInput = z.input<typeof goldenCaseSchema>;

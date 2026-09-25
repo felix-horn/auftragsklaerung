@@ -1,7 +1,7 @@
 # Auftragsklärung — Fachliche Regeln
 
-**Version:** v1.2
-**Stand:** 22.09.2026
+**Version:** v1.3
+**Stand:** 24.09.2026
 
 ## Zweck dieses Dokuments
 
@@ -114,6 +114,9 @@ nur, wenn sie nach R-04 mehrere Anliegen enthält.
 - **Dokumentenanforderung** — Der Kunde bittet um Zusendung oder erneute
   Zusendung eines vorhandenen Dokuments, etwa einer Auftragsbestätigung, eines
   Katalogs, eines Zertifikats, eines Lieferscheins oder einer Rechnungskopie.
+  Nicht: Unterlagen, die erst bei der Bearbeitung eines anderen Anliegens
+  entstehen, etwa ein Rücksendeetikett; sie gehören zu diesem Anliegen und
+  sind keine eigene Dokumentenanforderung.
 
 - **Werbung** — Nachrichten, mit denen uns jemand etwas verkaufen will (R-03),
   sowie offensichtlich unseriöse oder betrügerische Massennachrichten.
@@ -587,3 +590,4 @@ Bewusst nicht geregelt, jeweils mit Begründung.
 | v1.0 | 21.09.2026 | Erstfassung |
 | v1.1 | 21.09.2026 | Bekannte Lücken ergänzt: Stornierungen vor dem Versand, automatische Antworten, Nachrichten ohne Anliegen. Keine Bewertung betroffen. |
 | v1.2 | 22.09.2026 | Kategorie Neuanfrage in Kaufanfrage umbenannt; der Name legte fälschlich einen Neukunden nahe. Begriff Angebotsanfrage ergänzt. Keine Bewertung betroffen. |
+| v1.3 | 24.09.2026 | Dokumentenanforderung gegen Unterlagen abgegrenzt, die erst bei der Bearbeitung entstehen (Rücksendeetikett). Die Frage war beim Labeln offen; kein bereits vergebenes Label ändert sich. |

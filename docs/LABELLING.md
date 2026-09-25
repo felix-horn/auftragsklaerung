@@ -31,6 +31,10 @@ Der Leitfaden enthält keine fachlichen Regeln und keine Lösung für einen
 einzelnen Testfall. Er wird auch dem zweiten Annotator vorgelegt; eine
 Lösung darin würde dessen Urteil vorwegnehmen.
 
+Beim Labeln gilt daher: Welcher Wert richtig ist, steht in POLICY.md — die
+Spalte „Maßgeblich“ unter „Zuordnung“ zeigt für jedes Feld, wo. Dieser
+Leitfaden regelt nur, wie der Wert eingetragen wird.
+
 ---
 
 ## Zuordnung
