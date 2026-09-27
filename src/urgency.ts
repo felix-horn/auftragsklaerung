@@ -1,14 +1,22 @@
-import type { EmailExtraction } from './schema.js';
+import type { EmailExtraction } from "./schema.js";
 
-export type Urgency = 'low' | 'medium' | 'high';
+export type Urgency = "low" | "medium" | "high";
 
-export function deriveUrgency(extraction: EmailExtraction): Urgency {
-  const s = extraction.escalationSignals;
-  if (s.includes('production_halt') || s.includes('legal_threat') || s.includes('threat_to_cancel')) {
-    return 'high';
+// R-13. Reads only escalation signals and deadline, so it accepts anything that has
+// those two fields: the model's full output or a golden label.
+export function deriveUrgency(
+  input: Pick<EmailExtraction, "escalationSignals" | "deadlineStated">,
+): Urgency {
+  const { escalationSignals, deadlineStated } = input;
+  if (
+    escalationSignals.includes("production_halt") ||
+    escalationSignals.includes("legal_threat") ||
+    escalationSignals.includes("threat_to_cancel")
+  ) {
+    return "high";
   }
-  if (extraction.deadlineStated !== null || s.includes('repeat_contact')) {
-    return 'medium';
+  if (deadlineStated !== null || escalationSignals.includes("repeat_contact")) {
+    return "medium";
   }
-  return 'low';
+  return "low";
 }
