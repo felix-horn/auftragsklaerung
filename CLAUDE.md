@@ -24,6 +24,13 @@ German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
 - Anthropic `output_tokens` already includes thinking tokens. Gemini's
   `thoughtsTokenCount` is additive on top of `candidatesTokenCount`. Do not sum them
   the same way.
+- tsx and vitest strip types without checking them. `npx tsc --noEmit` is the only
+  type check. tsconfig.json has no `include`, so it checks every .ts file in the
+  repo, test files included.
+- vitest 5.0.1 needs vite as a required peer; npm installs it automatically. A fresh
+  `npm install` of vitest 5.0.1 crashes npm 10.9 ("Cannot read properties of null
+  (reading 'edgesOut')"); npm 11 installs it, and `npm ci` from the lockfile works
+  under npm 10 as well. In CI, install with `npm ci`.
 
 ## Conventions
 - Use `messages`, never the `prompt` shorthand. "The prompt" as a term means the
@@ -47,6 +54,14 @@ German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
   Zuordnung). After renaming an enum value, update LABELLING.md by hand.
   src/golden/cases.ts needs no reminder: it imports the enums and fails to
   load on a stale value.
+- Tests: `<name>.test.ts` next to the file under test, explicit
+  `import { expect, test } from "vitest"`, no vitest config file. Unit tests never
+  call the API. Golden values are imported from src/golden/cases.ts, never copied
+  into a test file; hand-written test values are invented. Check every change with
+  `npm test` and `npx tsc --noEmit`.
+- Pipeline code lives directly in src/ (urgency.ts, identifiers.ts). Code that
+  compares model output with golden labels lives in src/golden/ (compare.ts,
+  deadline.ts) and is never called by the pipeline.
 
 ## Observed numbers (20-email set, module-2 tag)
 - Input: ~1890–2000 tokens per email
@@ -55,9 +70,50 @@ German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
 - All 20 schema-valid
 
 ## Commands
+- `npm test` — runs every *.test.ts file once (vitest); no API calls
+- `npx tsc --noEmit` — type check; the only one
 - `npm run extract` — runs the 22 golden-set emails (src/golden/cases.ts) through the extractor
 - `npm run golden:check` — validates the golden set and reports how many cases are labelled
 - `DUMP_REQUEST_BODY=<path> npm run dump` — one API call, writes the exact wire payload
+
+## Eval comparison (Module 3.4)
+How a model output is compared with a golden label from 3.6 on. Each function is
+tested in the .test.ts file next to it.
+- Lists (`intents`, `orderNumbers`, `customerNumbers`, `escalationSignals`):
+  `haveSameItems` in src/golden/compare.ts. Order is ignored; duplicates count
+  (both sides are sorted, not turned into a Set), so a doubled value in the output
+  fails. Identifiers are compared exactly, without tolerance.
+- `intents`: reduced to their code values with `intentTypes` first. Confidence is
+  dropped, not used as a filter; the 0.5 cut stays in schema prose (see Open
+  experiments).
+- `deadlineStated`: presence (null vs. text) is a separate check, because a missed
+  or invented deadline moves urgency (R-13) and a wording difference does not.
+  Wording: `deadlineQuoteMatches` in src/golden/deadline.ts. The normalised label
+  must be contained in the normalised output (lower case, whitespace collapsed,
+  punctuation at the very end removed, on both sides). Containment, not equality:
+  the schema says "quoted verbatim" but not how much to quote, and LABELLING.md's
+  quoting convention is for annotators only. Known limit, pinned by a test: extra
+  words around the label are accepted. If the 3.6 raw outputs show over-long
+  quotes, telling the model how much to quote is a prompt experiment. No calendar
+  resolution: the emails carry no sent date, and R-12 anchors deadlines to the time
+  of writing.
+- `requestedAction`: present vs. null only (see Deferred design questions,
+  assertion coverage).
+- `urgency`: `deriveUrgency` takes
+  `Pick<EmailExtraction, "escalationSignals" | "deadlineStated">`, so it accepts a
+  golden label as well as a model output. Tested against every labelled case plus
+  one hand-written R-13 case (repeated contact with a deadline stays medium) that
+  no golden case covers. The golden-case tests passed on the first run by
+  construction (R-13 was written from the function); their value is catching later
+  drift between code and rule.
+- R-09 prefix assignment: `assignByPrefix` in src/identifiers.ts. Pipeline code,
+  not called by extractEmail yet (see Open experiments). Stufe 1 only: a number in
+  the exact R-09 format goes to the list its prefix names; every other number stays
+  in the list the model chose, because Stufe 2 and 3 depend on words only the model
+  sees. Nothing is added, removed or merged. "Exact format" means capital `A-` or
+  `K-` followed by five digits. This reading was chosen in 3.4; POLICY.md does not
+  say whether e.g. "A-5521" carries the prefix. No golden case depends on it; if
+  one appears, settle it in POLICY.md.
 
 ## Open experiments
 Run once the eval harness exists (after 3.6). Each changes one thing; compare
@@ -73,14 +129,10 @@ against the baseline.
 - Confidence threshold: move the 0.5 cut from schema prose into code. Needs
   3.7 calibration data first.
 - Prompt language: German DEFAULT_SYSTEM against the English one. Whole set.
+- Prefix assignment: run `assignByPrefix` on the model's numbers inside
+  extractEmail. Target: E-21. It can only fix Stufe 1 errors.
 
 ## Deferred design questions
-- R-09 prefix classification as a pure function (3.4): the model extracts
-  identifiers as written, code decides which array they belong in. Changes the
-  system under test — measure before and after wiring it in.
-- Deadline normaliser (3.4): its job is string tolerance ("bis Freitag" =
-  "Bis Freitag."). Calendar resolution is impossible: the emails carry no sent
-  date, and POLICY R-12 anchors deadlines to the time of writing.
 - Assertion coverage (3.6): map each POLICY rule to the assertion that checks
   it. R-02 (German free text) currently has none, because `requestedAction` is
   only asserted null vs non-null.
