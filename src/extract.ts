@@ -1,9 +1,4 @@
-import {
-  generateText,
-  Output,
-  NoObjectGeneratedError,
-  NoOutputGeneratedError,
-} from "ai";
+import { generateText, Output } from "ai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { writeFile } from "node:fs/promises";
 import { emailExtractionSchema } from "./schema.js";
@@ -36,6 +31,12 @@ export type ExtractOptions = {
   maxRetries?: number;
 };
 
+// Returns the extraction and the token usage. Printing is the caller's job:
+// run.ts prints both, the promptfoo provider passes them on to promptfoo.
+// Errors from generateText are not caught here and reach the caller as they are.
+// Two of them mean the model answered but gave nothing usable:
+// NoObjectGeneratedError (the answer is not valid JSON or fails the schema)
+// and NoOutputGeneratedError (there is no answer text to check at all).
 export async function extractEmail(
   emailText: string,
   opts: ExtractOptions = {},
@@ -45,29 +46,13 @@ export async function extractEmail(
     model = "claude-sonnet-5",
     maxRetries = 2,
   } = opts;
-  try {
-    const { output, usage } = await generateText({
-      model: anthropic(model),
-      output: Output.object({ schema: emailExtractionSchema }),
-      messages: [{ role: "user", content: `Email:\n${emailText}` }],
-      system,
-      maxOutputTokens: 2000,
-      maxRetries,
-    });
-
-    console.log("Email text:", emailText);
-    console.log("Returned `output` from `generateText`:", output);
-    console.log("Returned `usage` from `generateText`:", usage);
-    return output;
-  } catch (err) {
-    if (NoObjectGeneratedError.isInstance(err)) {
-      // model produced something, but it failed Zod validation against your schema
-      console.error("Schema validation failed. Raw text:", err.text);
-      console.error("Cause:", err.cause);
-    } else if (NoOutputGeneratedError.isInstance(err)) {
-      // model finished for a reason other than a normal stop (e.g. it tried to call a tool instead)
-      console.error("No structured output was produced at all.");
-    }
-    throw err;
-  }
+  const { output, usage } = await generateText({
+    model: anthropic(model),
+    output: Output.object({ schema: emailExtractionSchema }),
+    messages: [{ role: "user", content: `Email:\n${emailText}` }],
+    system,
+    maxOutputTokens: 2000,
+    maxRetries,
+  });
+  return { output, usage };
 }
