@@ -1,29 +1,14 @@
-description: promptfoo mechanics, no model involved
+description: golden set through the echo provider, no model involved
 
 providers:
   - id: file://providers/echo.ts
 
 prompts:
-  - '{{text}}'
+  - "{{email}}"
 
-tests:
-  - description: uppercases the input
-    vars:
-      text: bestellung 61150
-    assert:
-      - type: contains
-        value: BESTELLUNG
+tests: file://golden-tests.ts
 
-  - description: deliberately fails
-    vars:
-      text: bestellung 61150
-    assert:
-      - type: contains
-        value: bestellung
-
-  - description: javascript assertion over the output
-    vars:
-      text: bestellung 61150
-    assert:
-      - type: javascript
-        value: output.split(' ').length === 2
+defaultTest:
+  assert:
+    - type: javascript
+      value: output === context.vars.email.toUpperCase()
