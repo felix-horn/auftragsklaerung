@@ -1,7 +1,7 @@
-description: golden set through the echo provider, no model involved
+description: extractEmail over the golden set
 
 providers:
-  - id: file://providers/echo.ts
+  - id: file://providers/extract-email.ts
 
 prompts:
   - "{{email}}"
@@ -11,4 +11,4 @@ tests: file://golden-tests.ts
 defaultTest:
   assert:
     - type: javascript
-      value: output === context.vars.email.toUpperCase()
+      value: file://assertions/schema-valid.ts
