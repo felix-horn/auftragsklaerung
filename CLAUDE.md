@@ -31,6 +31,21 @@ German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
   `npm install` of vitest 5.0.1 crashes npm 10.9 ("Cannot read properties of null
   (reading 'edgesOut')"); npm 11 installs it, and `npm ci` from the lockfile works
   under npm 10 as well. In CI, install with `npm ci`.
+- promptfoo 0.123.0 loads .ts files (provider, test generator, assertion) by
+  registering tsx itself; imports with `.js` names resolve to the `.ts` files, as
+  under tsx and vitest. No withheld install script is needed for this.
+- promptfoo loads `.env` from the working directory on startup (dotenv, no
+  override: a variable already set in the shell wins). npm scripts run in the repo
+  root, so `npm run eval` gets the key from the repo's .env. Never use a config
+  `env:` block: promptfoo copies the config into every results file. Checked in a
+  scratch copy: the key appears in no results file, database entry or log.
+- A `file://` provider in a YAML config must be a class: promptfoo calls `new` on
+  the default export. Plain functions only work from a TypeScript config.
+- promptfoo retries a provider error whose message mentions a rate limit (up to 3
+  times, about a minute apart), on top of the AI SDK's own `maxRetries: 2`.
+- `--retry-errors` crashes with this layout (it resolves the provider path against
+  the working directory, not evals/). Use `--filter-errors-only <eval id>`.
+- promptfoo is pinned; ignore its update notice. An upgrade is its own commit.
 
 ## Conventions
 - Use `messages`, never the `prompt` shorthand. "The prompt" as a term means the
@@ -62,6 +77,10 @@ German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
 - Pipeline code lives directly in src/ (urgency.ts, identifiers.ts). Code that
   compares model output with golden labels lives in src/golden/ (compare.ts,
   deadline.ts) and is never called by the pipeline.
+- Everything promptfoo loads lives in evals/ (config, providers/, assertions/,
+  golden-tests.ts); nothing in src/ imports promptfoo.
+- Pipeline functions return data and print nothing. Entry points decide what to
+  show: run.ts prints, the promptfoo provider reports to promptfoo.
 
 ## Observed numbers (20-email set, module-2 tag)
 - Input: ~1890–2000 tokens per email
@@ -69,12 +88,26 @@ German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
   hard ones
 - All 20 schema-valid
 
+## Observed numbers (22-case set, first promptfoo run, 29.09.2026)
+- All 22 schema-valid. 18 s at promptfoo's default concurrency of 4.
+- Input: 1892–2004 tokens per email, 42,924 in total
+- Output: 75–594 tokens per email (mean 178), 3,920 in total. Highest: E-17 594,
+  E-18 430, E-16 251. Lowest: E-05 and E-19, 75 each.
+- Cost of one full run: about 12.5 US cents ($2 / $10 per million input / output
+  tokens for claude-sonnet-5; output includes thinking).
+
 ## Commands
 - `npm test` — runs every *.test.ts file once (vitest); no API calls
 - `npx tsc --noEmit` — type check; the only one
 - `npm run extract` — runs the 22 golden-set emails (src/golden/cases.ts) through the extractor
 - `npm run golden:check` — validates the golden set and reports how many cases are labelled
 - `DUMP_REQUEST_BODY=<path> npm run dump` — one API call, writes the exact wire payload
+- `npm run eval` — promptfoo runs the 22 golden cases through extractEmail (22 API
+  calls, about 12.5 US cents). Pass options after `--`: `--filter-first-n 1`,
+  `--filter-pattern 'E-1[45]'`, `--filter-errors-only <eval id>`.
+- `npx promptfoo view` — browser view of past runs; full answers and assertion reasons
+- `PROMPTFOO_DISABLE_TELEMETRY=1 npx promptfoo export eval <eval id> -o <file>` —
+  a stored run as JSON; no API call
 
 ## Eval comparison (Module 3.4)
 How a model output is compared with a golden label from 3.6 on. Each function is
@@ -115,6 +148,29 @@ tested in the .test.ts file next to it.
   say whether e.g. "A-5521" carries the prefix. No golden case depends on it; if
   one appears, settle it in POLICY.md.
 
+## Eval harness (Module 3.5)
+- evals/providers/extract-email.ts calls extractEmail: the pipeline is under test,
+  not the prompt in isolation. It reports token usage to promptfoo.
+- Test cases come from src/golden/cases.ts through evals/golden-tests.ts (one per
+  case: description = id, vars.email = email). Labels are not passed yet (3.6).
+- The prompt template is `'{{email}}'`, a passthrough. With the echo provider, all
+  22 emails were checked to arrive unchanged (Nunjucks autoescape is off).
+- Separating question for a case without a valid extraction: does it say something
+  about the pipeline, or only about the environment?
+  - Schema failure (`NoObjectGeneratedError`, or `NoOutputGeneratedError` when
+    there is no answer text) is a result of the pipeline: the provider passes the
+    raw text on as output and evals/assertions/schema-valid.ts fails the case. It
+    counts as a failed case with every field wrong and is never excluded from the
+    accuracy denominator; otherwise a model that breaks on the hardest emails
+    scores better, because those cases drop out.
+  - Every other error (key, network, rate limit, server) is returned as a promptfoo
+    ERROR: not measured, re-run with `--filter-errors-only <eval id>`.
+- extract.ts must not catch these two errors and return a fallback object.
+  Letting the error propagate, or logging and rethrowing, is fine. Returning a
+  default (empty arrays, `other`) is not: it turns a failure into a
+  plausible-looking wrong answer.
+- extractEmail returns `{ output, usage }` and prints nothing (see Conventions).
+
 ## Open experiments
 Run once the eval harness exists (after 3.6). Each changes one thing; compare
 against the baseline.
@@ -140,6 +196,20 @@ against the baseline.
   or require a justification field. After 3.6.
 - Split "does this belong in the queue" from "what does the customer want"
   into two fields. After 3.6.
+- Scheduled eval run (3.8): add a `schedule:` trigger to the eval GitHub Actions
+  workflow next to the push/PR trigger, running the golden-set eval daily (e.g.
+  cron `17 3 * * *`, UTC) against the production configuration: same model IDs,
+  same settings. The push gate only answers "did my change break the known
+  cases?". It cannot catch provider-side changes without a code change: an alias
+  repointed to a new model, or infrastructure bugs behind a pinned model ID
+  (precedent: Anthropic's Aug–Sep 2025 incident degraded API output without a
+  model version change). Cost: a few lines of YAML, plus 22 calls per run at about
+  12.5 US cents (Observed numbers). Without it, a provider-side regression goes
+  unnoticed until the people reviewing drafts complain. Related check: all model
+  IDs are pinned; no Gemini `-latest` or `-preview` IDs, and no pre-4.6 dateless
+  Claude aliases such as `claude-sonnet-4-5`. From the 4.6 generation onward the
+  dateless ID is the fixed snapshot. Open for 3.8: how a failed scheduled run
+  reaches Felix (notification channel).
 - Golden set size: 22 cases in Module 3. Expand when statistical resolution
   is needed (Module 5 onward), not before.
 - Unprefixed identifiers recorded as written (R-09 step 2) get normalised at
