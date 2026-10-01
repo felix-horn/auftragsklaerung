@@ -12,3 +12,25 @@ defaultTest:
   assert:
     - type: javascript
       value: file://assertions/schema-valid.ts
+      metric: schemaValid
+    - type: javascript
+      value: file://assertions/fields.ts:intents
+      metric: intents
+    - type: javascript
+      value: file://assertions/fields.ts:requestedAction
+      metric: requestedAction
+    - type: javascript
+      value: file://assertions/fields.ts:orderNumbers
+      metric: orderNumbers
+    - type: javascript
+      value: file://assertions/fields.ts:customerNumbers
+      metric: customerNumbers
+    - type: javascript
+      value: file://assertions/fields.ts:escalationSignals
+      metric: escalationSignals
+    - type: javascript
+      value: file://assertions/fields.ts:deadlineStated
+      metric: deadlineStated
+    - type: javascript
+      value: file://assertions/fields.ts:urgency
+      metric: urgency
