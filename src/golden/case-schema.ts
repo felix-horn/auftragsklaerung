@@ -86,6 +86,7 @@ export const goldenCaseSchema = z
 
 export type GoldenCaseInput = z.input<typeof goldenCaseSchema>;
 export type GoldenCase = z.output<typeof goldenCaseSchema>;
+export type GoldenLabels = z.output<typeof goldenLabelsSchema>;
 
 // Validates every case and reports problems by case id, not by array index.
 export function validateGoldenSet(rawCases: GoldenCaseInput[]): GoldenCase[] {
