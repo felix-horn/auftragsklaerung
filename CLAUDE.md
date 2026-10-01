@@ -76,7 +76,8 @@ German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
   `npm test` and `npx tsc --noEmit`.
 - Pipeline code lives directly in src/ (urgency.ts, identifiers.ts). Code that
   compares model output with golden labels lives in src/golden/ (compare.ts,
-  deadline.ts) and is never called by the pipeline.
+  deadline.ts) and is never called by the pipeline. evals/assertions/fields.ts
+  only applies those helpers per field for promptfoo.
 - Everything promptfoo loads lives in evals/ (config, providers/, assertions/,
   golden-tests.ts); nothing in src/ imports promptfoo.
 - Pipeline functions return data and print nothing. Entry points decide what to
@@ -96,6 +97,18 @@ German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
 - Cost of one full run: about 12.5 US cents ($2 / $10 per million input / output
   tokens for claude-sonnet-5; output includes thinking).
 
+## Observed numbers (22-case set, 3.6 baseline, 01.10.2026)
+- Baseline run for Open experiments: eval-iSz-2026-10-01T16:56:58, 0 errors.
+  Tokens 42,924 input / 3,961 output, about 12.5 US cents.
+- Correct out of 22: schemaValid 22, intents 20, requestedAction 21, orderNumbers
+  19, customerNumbers 21, escalationSignals 22, deadlineStated 22, urgency 22.
+  Field comparisons 147/154 (95.5%; the 3.3 annotator agreement was 148/154 on the
+  same seven fields, but it measured the policy's clarity, not the model). Cases
+  with every field right: 16/22.
+- The 29.09 answers (eval-qe7-2026-09-29T16:58:53), graded with the same checks in
+  a scratch copy: 146/154, 15/22 cases. Same misses as the baseline in E-07, E-14,
+  E-16, E-18, E-21; differences: see Golden set, seen in the first runs.
+
 ## Commands
 - `npm test` — runs every *.test.ts file once (vitest); no API calls
 - `npx tsc --noEmit` — type check; the only one
@@ -104,8 +117,10 @@ German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
 - `DUMP_REQUEST_BODY=<path> npm run dump` — one API call, writes the exact wire payload
 - `npm run eval` — promptfoo runs the 22 golden cases through extractEmail (22 API
   calls, about 12.5 US cents). Pass options after `--`: `--filter-first-n 1`,
-  `--filter-pattern 'E-1[45]'`, `--filter-errors-only <eval id>`.
-- `npx promptfoo view` — browser view of past runs; full answers and assertion reasons
+  `--filter-pattern 'E-1[45]'`, `--filter-errors-only <eval id>`. Exits with code
+  100 (silently) when any case fails.
+- `npx promptfoo view` — browser view of past runs: accuracy per field above the
+  results, Display → Failures, details per case (Evaluation and Metadata tabs)
 - `PROMPTFOO_DISABLE_TELEMETRY=1 npx promptfoo export eval <eval id> -o <file>` —
   a stored run as JSON; no API call
 
@@ -113,7 +128,7 @@ German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
 How a model output is compared with a golden label from 3.6 on. Each function is
 tested in the .test.ts file next to it.
 - Lists (`intents`, `orderNumbers`, `customerNumbers`, `escalationSignals`):
-  `haveSameItems` in src/golden/compare.ts. Order is ignored; duplicates count
+  `hasSameItems` in src/golden/compare.ts. Order is ignored; duplicates count
   (both sides are sorted, not turned into a Set), so a doubled value in the output
   fails. Identifiers are compared exactly, without tolerance.
 - `intents`: reduced to their code values with `intentTypes` first. Confidence is
@@ -152,7 +167,8 @@ tested in the .test.ts file next to it.
 - evals/providers/extract-email.ts calls extractEmail: the pipeline is under test,
   not the prompt in isolation. It reports token usage to promptfoo.
 - Test cases come from src/golden/cases.ts through evals/golden-tests.ts (one per
-  case: description = id, vars.email = email). Labels are not passed yet (3.6).
+  case: description = id, vars.email = email, metadata.labels = labels; see Eval
+  assertions).
 - The prompt template is `'{{email}}'`, a passthrough. With the echo provider, all
   22 emails were checked to arrive unchanged (Nunjucks autoescape is off).
 - Separating question for a case without a valid extraction: does it say something
@@ -171,6 +187,47 @@ tested in the .test.ts file next to it.
   plausible-looking wrong answer.
 - extractEmail returns `{ output, usage }` and prints nothing (see Conventions).
 
+## Eval assertions (Module 3.6)
+- Labels travel as test metadata (`metadata.labels`, generated from cases.ts at
+  load time). promptfoo stores them with every result, so a stored run shows what
+  it was graded against. Assertions read `context.test.metadata`;
+  `context.metadata` is the provider response's metadata. The provider class gets
+  the test case too but reads only the prompt: no label reaches the model.
+- evals/assertions/fields.ts: one named export per labelled field, loaded as
+  `file://assertions/fields.ts:<field>`, each with `metric: <field>`. schema-valid.ts
+  stays, with `metric: schemaValid`. A case passes only if all eight pass.
+- Shared wrapper `fieldAssertion`: missing labels throw (ERROR: harness problem);
+  an output that is not a valid extraction returns a failed result with reason
+  `no valid extraction` in every field, never a throw (a throw removes the case
+  from every metric's count). Pinned by evals/assertions/fields.test.ts (25 tests,
+  no API).
+- A misspelt export name in the config (`fields.ts:intent`) is not caught by tsc;
+  every case becomes an ERROR.
+- Per-field accuracy = namedScores ÷ namedScoresCount (export JSON) or read in the
+  view. Report it only from a run with 0 ERRORs; after an ERROR repeat the whole
+  run instead of combining two evals.
+- 22 cases: one miss moves a field's accuracy (and the case pass rate) by about
+  4.5 points. Quote every number with that.
+- Rule coverage (POLICY v1.3 → check → cases that exercise it):
+  | Rule | Checked by | Cases |
+  |---|---|---|
+  | R-01 | partly: invented values in requestedAction presence, number lists, escalationSignals | E-07, E-13, E-14 |
+  | R-02 | numbers exact, deadline wording; German free text: none | E-16 |
+  | R-03 | intents | E-05, E-19 |
+  | R-04 | intents | E-09, E-16, E-18 |
+  | R-05 | intents | E-04, E-12, E-15, E-22 |
+  | R-06 | requestedAction presence; wording: none | E-11, E-14 |
+  | R-07 | requestedAction presence | E-05, E-19 |
+  | R-08 | orderNumbers | E-02, E-06, E-11 |
+  | R-09 | orderNumbers, customerNumbers | E-04, E-07, E-08, E-16, E-21 |
+  | R-10 | escalationSignals | E-04, E-12, E-13, E-14, E-18 |
+  | R-11 | escalationSignals | E-04, E-08, E-16 |
+  | R-12 | deadlineStated | E-04, E-08, E-10, E-12, E-20 |
+  | R-13 | urgency | all |
+  | Begriffe (instructions inside the message) | intents | E-17 |
+  Not covered: R-02's German free text and the content of requestedAction (only
+  presence is compared), so an invented detail inside a stated action passes.
+
 ## Open experiments
 Run once the eval harness exists (after 3.6). Each changes one thing; compare
 against the baseline.
@@ -187,11 +244,17 @@ against the baseline.
 - Prompt language: German DEFAULT_SYSTEM against the English one. Whole set.
 - Prefix assignment: run `assignByPrefix` on the model's numbers inside
   extractEmail. Target: E-21. It can only fix Stufe 1 errors.
+- Reason vs. request (R-04): say in the `intents` description that a fact which
+  only explains another request is not an intent of its own. Targets: E-16
+  (adds complaint), E-18 (adds order_status).
+- Unnamed numbers (R-09 Stufe 3): say in the number descriptions that a number the
+  customer does not call an order or customer number is recorded in neither list.
+  Target: E-07.
+- Deadline extent: say in the `deadlineStated` description to quote the time
+  together with the word that introduces it ("bis", "spätestens"). Target: E-08,
+  E-12 (short quotes on 29.09 only).
 
 ## Deferred design questions
-- Assertion coverage (3.6): map each POLICY rule to the assertion that checks
-  it. R-02 (German free text) currently has none, because `requestedAction` is
-  only asserted null vs non-null.
 - `other` used as a hedge (E-16, E-17): sharpen prose, remove the enum value,
   or require a justification field. After 3.6.
 - Split "does this belong in the queue" from "what does the customer want"
@@ -249,3 +312,19 @@ against the baseline.
   R-04, POLICY v1.3); E-07 puts the bare 78432 into an array (label: both
   empty, R-09 step 3); E-21 puts K-62418 into orderNumbers because the
   customer calls it "Bestellnummer" (label: customerNumbers, R-09 step 1).
+- Seen in the first runs (29.09 and the 01.10 baseline), recorded after the
+  predictions above and without changing them:
+  - In both runs: E-14 invents a requestedAction; E-16 adds `complaint`; E-18
+    adds `order_status`; E-07 puts 78432 into orderNumbers; E-21 puts K-62418
+    into orderNumbers instead of customerNumbers.
+  - Not seen in either run: `other` as a hedge (E-16, E-17); a wrong intent in
+    E-12.
+  - 01.10 only: E-12 returns no order number (label A-48120).
+  - 29.09 only: E-08 quotes "Freitag", E-12 "30.04." (labels "bis Freitag", "bis
+    zum 30.04." per LABELLING.md); the containment rule counts both as wrong.
+  - The texts of E-07, E-14, E-16 and E-18 appear as examples in POLICY.md,
+    E-21's wording nearly so. The model never sees POLICY.md; it fails where a
+    policy rule is not stated in the prompt.
+  - Blur: of the six fields disputed in 3.3, only E-16 `intents` is missed, and
+    POLICY v1.3 (R-04's example) now decides it word for word. No miss is a blur
+    case.
