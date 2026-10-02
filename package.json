@@ -6,6 +6,7 @@
   "scripts": {
     "dump": "tsx src/dump-body.ts",
     "eval": "PROMPTFOO_DISABLE_TELEMETRY=1 promptfoo eval --config evals/promptfooconfig.yaml --no-cache",
+    "eval:report": "tsx evals/report.ts",
     "extract": "tsx src/run.ts",
     "golden:check": "tsx src/golden/check.ts",
     "test": "vitest run"
