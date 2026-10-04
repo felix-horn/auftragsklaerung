@@ -21,6 +21,7 @@ German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
 - claude-sonnet-5 runs adaptive thinking by default at effort high. There is no
   thinking budget and no off switch. Run-to-run variance is therefore irreducible by
   configuration: measure it with repeated runs, do not try to eliminate it.
+  Measured in 3.7: see Noise and comparing runs.
 - Anthropic `output_tokens` already includes thinking tokens. Gemini's
   `thoughtsTokenCount` is additive on top of `candidatesTokenCount`. Do not sum them
   the same way.
@@ -46,6 +47,18 @@ German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
 - `--retry-errors` crashes with this layout (it resolves the provider path against
   the working directory, not evals/). Use `--filter-errors-only <eval id>`.
 - promptfoo is pinned; ignore its update notice. An upgrade is its own commit.
+- promptfoo's response cache only applies to its built-in model providers. The
+  custom provider calls extractEmail directly, so its answers are never cached:
+  checked in 3.7, evals without `--no-cache` still sent every request. The flag
+  stays in the script; it is harmless.
+- `--repeat <n>` runs every test case n times inside one eval: one eval ID, 22·n
+  results, and the metric boxes count all of them. testIdx runs case by case
+  (E-01's n repeats first), so the k-th result of a case is its repeat k. The CLI
+  table shows 25 rows. The web view has no per-case summary across repeats; its
+  search box searches outputs, not descriptions.
+- `--filter-errors-only <id>` re-runs the test case, not the missing repeat: in a
+  new eval, as often as `--repeat` says (once without it). It cannot fill a gap in
+  a repeated eval; after an ERROR, re-run the whole eval.
 
 ## Conventions
 - Use `messages`, never the `prompt` shorthand. "The prompt" as a term means the
@@ -79,7 +92,8 @@ German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
   deadline.ts) and is never called by the pipeline. evals/assertions/fields.ts
   only applies those helpers per field for promptfoo.
 - Everything promptfoo loads lives in evals/ (config, providers/, assertions/,
-  golden-tests.ts); nothing in src/ imports promptfoo.
+  golden-tests.ts); nothing in src/ imports promptfoo. evals/report.ts lives there
+  too but is not loaded by promptfoo: it reads exported evals.
 - Pipeline functions return data and print nothing. Entry points decide what to
   show: run.ts prints, the promptfoo provider reports to promptfoo.
 
@@ -98,7 +112,7 @@ German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
   tokens for claude-sonnet-5; output includes thinking).
 
 ## Observed numbers (22-case set, 3.6 baseline, 01.10.2026)
-- Baseline run for Open experiments: eval-iSz-2026-10-01T16:56:58, 0 errors.
+- Single-run baseline until 3.7: eval-iSz-2026-10-01T16:56:58, 0 errors.
   Tokens 42,924 input / 3,961 output, about 12.5 US cents.
 - Correct out of 22: schemaValid 22, intents 20, requestedAction 21, orderNumbers
   19, customerNumbers 21, escalationSignals 22, deadlineStated 22, urgency 22.
@@ -108,6 +122,21 @@ German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
 - The 29.09 answers (eval-qe7-2026-09-29T16:58:53), graded with the same checks in
   a scratch copy: 146/154, 15/22 cases. Same misses as the baseline in E-07, E-14,
   E-16, E-18, E-21; differences: see Golden set, seen in the first runs.
+
+## Observed numbers (22-case set, 3.7, ten runs, 02.10.2026)
+- Baseline for Open experiments: eval-6y4-2026-10-02T13:59:42 (`--repeat 10`,
+  export ~/eval-3.7-repeat10.json), 220 results, 0 errors. Tokens 429,240 input /
+  40,425 output, about 1.26 US dollars.
+- Correct out of 220: schemaValid 220, intents 195, requestedAction 210,
+  orderNumbers 198, customerNumbers 210, escalationSignals 220, deadlineStated 212,
+  urgency 220. Answers with every check right: 159/220.
+- Per run (run k = the k-th result of each case): field comparisons 148, 146, 145,
+  146, 145, 146, 148, 146, 147, 148 (145–148 of 154); emails fully right 17, 15,
+  15, 15, 16, 16, 17, 15, 16, 17 (15–17 of 22). The 01.10 (147, 16) and 29.09
+  (146, 15) runs lie inside this range.
+- Of 176 checks per run, 165 were right in all ten runs, 6 wrong in all ten and 5
+  changed (Golden set, seen in the 3.7 ten runs). Only the 5 move a run's total;
+  the 6 cap it at 148.
 
 ## Commands
 - `npm test` — runs every *.test.ts file once (vitest); no API calls
@@ -119,6 +148,12 @@ German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
   calls, about 12.5 US cents). Pass options after `--`: `--filter-first-n 1`,
   `--filter-pattern 'E-1[45]'`, `--filter-errors-only <eval id>`. Exits with code
   100 (silently) when any case fails.
+- `npm run eval -- --repeat 10` — every case ten times in one eval (220 API calls,
+  about 1.25 US dollars, about 3 minutes). The baseline and every experiment run
+  this way (see Noise and comparing runs).
+- `npm run eval:report -- <export.json>` — evals/report.ts over an exported eval:
+  checks not right in every run, totals per run and over all runs, intent
+  confidences next to the labels. No API call; refuses an eval with ERRORs.
 - `npx promptfoo view` — browser view of past runs: accuracy per field above the
   results, Display → Failures, details per case (Evaluation and Metadata tabs)
 - `PROMPTFOO_DISABLE_TELEMETRY=1 npx promptfoo export eval <eval id> -o <file>` —
@@ -205,7 +240,7 @@ tested in the .test.ts file next to it.
   every case becomes an ERROR.
 - Per-field accuracy = namedScores ÷ namedScoresCount (export JSON) or read in the
   view. Report it only from a run with 0 ERRORs; after an ERROR repeat the whole
-  run instead of combining two evals.
+  run instead of combining two evals. The same holds for a repeated eval.
 - 22 cases: one miss moves a field's accuracy (and the case pass rate) by about
   4.5 points. Quote every number with that.
 - Rule coverage (POLICY v1.3 → check → cases that exercise it):
@@ -228,35 +263,102 @@ tested in the .test.ts file next to it.
   Not covered: R-02's German free text and the content of requestedAction (only
   presence is compared), so an invented detail inside a stated action passes.
 
+## Noise and comparing runs (Module 3.7)
+- The unchanged pipeline moves by chance: in the ten baseline runs a run's total
+  ranged over 145–148 field comparisons and 15–17 fully right emails. Never
+  compare single runs; one experiment run inside that range shows nothing.
+- An experiment is one eval with `--repeat 10` and 0 ERRORs, compared with the
+  baseline per check (one field of one email), from `npm run eval:report` on both
+  exports. Ten runs against ten keeps one table for every comparison.
+- A change counts when chance alone would produce it less than 1 time in 20
+  (Fisher's exact test, one-sided, α = 0.05, 10 runs against 10):
+  | Baseline right | Better from | Worse at |
+  |---|---|---|
+  | 0/10 | 4/10 | – |
+  | 1/10 | 6/10 | – |
+  | 2/10 | 7/10 | – |
+  | 3/10 | 8/10 | – |
+  | 4/10 | 9/10 | 0/10 |
+  | 5/10 | 10/10 | 0/10 |
+  | 6/10 | 10/10 | 1/10 |
+  | 7/10 | cannot be shown | 2/10 |
+  | 8/10 | cannot be shown | 3/10 |
+  | 9/10 | cannot be shown | 4/10 |
+  | 10/10 | – | 6/10 |
+  "–": no result counts.
+- Target checks get a verdict from the table: better, or not shown. Every check
+  that was 10/10 in the baseline and is not in the experiment gets its answers
+  read; at 6/10 or below it counts as harmed.
+- Metric boxes and per-run totals describe; they never decide. A box mixes the
+  target with 21 other emails: one email fixed in all ten runs moves it by 10 of
+  220, chance moves the intents and deadlineStated boxes by about 3 of 220
+  between two ten-run evals.
+- Checks at 7/10–9/10 cannot show an improvement with ten runs; about 25 runs per
+  side would be needed. Their experiments can only show harm.
+- Limits: ten runs measure steadiness on these 22 emails, not accuracy on new
+  ones. "Right in every run" is not "never wrong": a check that fails 1 time in
+  20 comes out 10/10 in about 60% of ten-run evals. With many changing checks,
+  about 1 in 20 verdicts can be chance.
+- evals/report.ts grades nothing: it counts the pass/fail and the reasons the
+  assertions stored. It groups results by description in testIdx order (run k =
+  k-th result per case), sorts list answers because the checks ignore order,
+  shows requestedAction only as present or null, and refuses evals with ERRORs.
+  Its "All runs together" totals equal the metric boxes; checked against the view
+  and against the 01.10 numbers (147/154, 16/22). No vitest test: these two checks
+  cover the counting, and nothing in the pipeline reads its output.
+- Confidence, ten baseline runs: 266 intent reports, 28 not in the label, all
+  from E-12, E-16, E-17 and E-18, none above 0.80; all 220 reports at 0.85 or
+  higher were in the label. Right intents also sit low: E-17's only intent
+  `complaint` 0.60–0.70, E-18's `invoice_question` 0.55–0.75; in 6 of 10 E-18
+  runs the wrong `order_status` had the higher confidence. By group: 0.9–1.0
+  193/193 in the label, 0.8–0.89 27/31, 0.7–0.79 7/22, 0.6–0.69 10/16,
+  0.5–0.59 1/4, below 0.5 none. Only 2–4 emails stand behind each group below
+  0.8. The lowest confidence reported was 0.50 (once).
+
 ## Open experiments
-Run once the eval harness exists (after 3.6). Each changes one thing; compare
-against the baseline.
+Each changes one thing and is judged per check against the 3.7 baseline (Noise
+and comparing runs). The target's baseline result is given as right/10.
 - Sender premise: remove the claim in DEFAULT_SYSTEM that all senders are
-  customers. Target: E-19.
-- Field rename: `requestedAction` → `requestStated`. Target: E-14.
+  customers. Target: E-19 (all checks 10/10): only harm can be shown.
+- Field rename: `requestedAction` → `requestStated`. Target: E-14
+  (requestedAction 0/10).
 - Null example: the `requestedAction` description gives "pure venting" as its
   null example; E-14 is a calm factual complaint. Replace the example. Target:
-  E-14. Run separately from the rename.
+  E-14 (0/10). Run separately from the rename.
 - Injection line: run with and without the embedded-instruction rule in
-  DEFAULT_SYSTEM. Target: E-17.
-- Confidence threshold: move the 0.5 cut from schema prose into code. Needs
-  3.7 calibration data first.
+  DEFAULT_SYSTEM. Target: E-17 (intents 8/10, `other` instead of `complaint` 2×):
+  only harm can be shown.
+- Confidence threshold: move the 0.5 cut from schema prose into code. Checked
+  in 3.7 on the stored baseline answers (no API): no cut-off separates right from
+  wrong intents. Dropping intents below 0.6 gives 197 of 220 intents right
+  (baseline 195, within noise); from 0.65 on, answers are left with no intent at
+  all (R-04), from 0.8 on every E-17 and E-18 answer. Not run; reconsider when the
+  golden set has more emails with wrong intents.
 - Prompt language: German DEFAULT_SYSTEM against the English one. Whole set.
 - Prefix assignment: run `assignByPrefix` on the model's numbers inside
-  extractEmail. Target: E-21. It can only fix Stufe 1 errors.
+  extractEmail. Target: E-21 (orderNumbers and customerNumbers 0/10). It can only
+  fix Stufe 1 errors.
 - Reason vs. request (R-04): say in the `intents` description that a fact which
   only explains another request is not an intent of its own. Targets: E-16
-  (adds complaint), E-18 (adds order_status).
+  (adds complaint; intents 0/10, also adds `other` in 3), E-18 (adds order_status;
+  0/10).
 - Unnamed numbers (R-09 Stufe 3): say in the number descriptions that a number the
   customer does not call an order or customer number is recorded in neither list.
-  Target: E-07.
+  Target: E-07 (orderNumbers 0/10).
 - Deadline extent: say in the `deadlineStated` description to quote the time
-  together with the word that introduces it ("bis", "spätestens"). Target: E-08,
-  E-12 (short quotes on 29.09 only).
+  together with the word that introduces it ("bis", "spätestens"). Target: E-12
+  (deadlineStated 4/10, "30.04." 6×; counts from 9/10). E-08 (8/10, "Freitag" 2×)
+  can only show harm.
 
 ## Deferred design questions
 - `other` used as a hedge (E-16, E-17): sharpen prose, remove the enum value,
-  or require a justification field. After 3.6.
+  or require a justification field. After 3.6. Seen in 3.7: E-16 adds `other` in 3
+  of 10 runs; E-17 answers `other` instead of `complaint` in 2 of 10.
+- Confidence as a review mark in the approval queue (Module 7): in the 3.7
+  baseline every intent reported at 0.85 or higher was right and all 28 wrong ones
+  were at 0.80 or lower, but 18 right reports (E-17, E-18) were below 0.85 too.
+  The 0.85 line was read off the same data, so on new emails it is too
+  optimistic. Whether the queue shows such a mark is Felix's decision there.
 - Split "does this belong in the queue" from "what does the customer want"
   into two fields. After 3.6.
 - Scheduled eval run (3.8): add a `schedule:` trigger to the eval GitHub Actions
@@ -274,7 +376,8 @@ against the baseline.
   dateless ID is the fixed snapshot. Open for 3.8: how a failed scheduled run
   reaches Felix (notification channel).
 - Golden set size: 22 cases in Module 3. Expand when statistical resolution
-  is needed (Module 5 onward), not before.
+  is needed (Module 5 onward), not before. 3.7: calibration and any confidence
+  threshold need more emails with wrong intents; only four exist.
 - Unprefixed identifiers recorded as written (R-09 step 2) get normalised at
   the ERP lookup. Module 4.
 - Reply drafting is Module 5b (added to the roadmap in 3.1). The LLM-as-judge
@@ -296,13 +399,25 @@ against the baseline.
   vs null), orderNumbers 21/22, customerNumbers 21/22, escalationSignals,
   deadlineStated and urgency 22/22. After reconciliation it is 100% by
   construction and says nothing.
+- The six fields that differed, each resolved by Felix in 3.3 toward the second
+  annotator's reading:
+  - decided by POLICY.md word for word: E-04 orderNumbers (an invoice number is
+    not an order number, R-09), E-08 customerNumbers (the unprefixed "Kundennummer
+    66017" is recorded as written, R-09 Stufe 2), E-11 requestedAction ("Können
+    Sie mir dazu bitte Auskunft geben?" is a request, R-06);
+  - judgment calls: E-02 intents → complaint (first label other), E-17 intents →
+    complaint (first label other; Reklamation includes demanding an Erstattung),
+    E-16 intents → cancellation only (first label also document_request; led to
+    POLICY v1.3, which now decides it word for word).
+  A model miss on the first three is a model error; on a judgment call it may be
+  a blur case, where the policy leaves room.
 - Every difference was resolved against POLICY.md. One of them (E-16) led
   to a policy clarification (v1.3). v1.2, the Kaufanfrage rename, came
   earlier, from reviewing LABELLING.md.
 - The second annotator marked E-12 as uncertain: the demanded Gutschrift
   reads like Reklamation, but Reklamation excludes complaints about an
   invoice. Both annotators labelled `invoice_question`. Likely blur case in
-  3.6.
+  3.6. 3.7: the model added `complaint` in 3 of 10 runs.
 - Expected baseline failures, written down before the first run on this
   set so that 3.6 can tell expected from surprising ones.
   Seen in earlier runs: E-14 invents a requestedAction (label: null);
@@ -328,3 +443,16 @@ against the baseline.
   - Blur: of the six fields disputed in 3.3, only E-16 `intents` is missed, and
     POLICY v1.3 (R-04's example) now decides it word for word. No miss is a blur
     case.
+- Seen in the 3.7 ten runs (eval-6y4), recorded after the predictions above:
+  - Wrong in all ten: E-07 orderNumbers `["78432"]`; E-14 requestedAction
+    invented; E-16 intents (adds `complaint`; also `other` in 3); E-18 intents
+    (adds `order_status`); E-21 K-62418 in orderNumbers, customerNumbers empty.
+  - Changed between runs: E-08 deadlineStated 8/10 ("Freitag" 2×); E-12 intents
+    7/10 (adds `complaint` 3×); E-12 orderNumbers 8/10 (`[]` 2×); E-12
+    deadlineStated 4/10 ("30.04." 6×); E-17 intents 8/10 (`other` instead of
+    `complaint` 2×).
+  - First seen in 3.7: `other` as a hedge (E-16, E-17) and a wrong intent in E-12,
+    both not seen in the first runs.
+  - Of the six fields disputed in 3.3, E-16 and E-17 intents are missed (E-17 is
+    one of the judgment calls); E-02, E-04, E-08 and E-11 were right in all ten
+    runs. E-12, which the second annotator marked uncertain, adds `complaint`.
