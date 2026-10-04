@@ -1,11 +1,14 @@
 import { readFileSync } from "node:fs";
 import { z } from "zod";
+import { emailExtractionSchema, type EmailExtraction } from "../src/schema.js";
+import { goldenLabelsSchema } from "../src/golden/case-schema.js";
 
 // Reads one exported eval (npx promptfoo export eval <id> -o <file>.json)
 // and prints, for an eval run with --repeat:
 // 1. every check (one of the eight results for one email) that was not
 //    right in all runs, with the answers it saw;
-// 2. the totals of each run, and of all runs together.
+// 2. the totals of each run, and of all runs together;
+// 3. the confidence of every intent the model reported, next to the label.
 // It grades nothing itself: pass/fail and the answers are what the
 // assertions stored in the eval. Not loaded by promptfoo; no API calls.
 // Usage: npm run eval:report -- <export.json>
@@ -20,7 +23,10 @@ const exportSchema = z.object({
         // promptfoo's codes: 0 = all checks passed, 1 = a check failed,
         // 2 = ERROR (no answer to check)
         failureReason: z.number(),
-        testCase: z.object({ description: z.string() }),
+        testCase: z.object({
+          description: z.string(),
+          metadata: z.object({ labels: goldenLabelsSchema }),
+        }),
         gradingResult: z
           .object({
             componentResults: z.array(
@@ -32,6 +38,9 @@ const exportSchema = z.object({
             ),
           })
           .nullish(),
+        // The model's answer as the provider passed it on. Section 3 parses
+        // it with the extraction schema to read the confidences.
+        response: z.object({ output: z.unknown().optional() }).nullish(),
       }),
     ),
   }),
@@ -168,4 +177,81 @@ console.log("\nAll runs together (compare with the boxes in the view):");
 for (const check of checks) {
   const right = sorted.filter((r) => checkResult(r, check).pass).length;
   console.log(`  ${check.padEnd(17)} ${right}/${sorted.length}`);
+}
+
+// 3. The confidence of every intent the model reported, next to the label.
+// One row per email and intent type: is the type in the label, in how many
+// runs did the model report it, and with which confidences. Labelled types
+// start with an empty list, so an intent the model never reported shows up.
+type IntentType = EmailExtraction["intents"][number]["type"];
+type IntentRow = {
+  id: string;
+  type: IntentType;
+  inLabel: boolean;
+  confidences: number[];
+};
+const intentRows: IntentRow[] = [];
+for (const id of ids) {
+  const results = runsOf(id);
+  const labelled = results[0].testCase.metadata.labels.intents;
+  const confidences = new Map<IntentType, number[]>(
+    labelled.map((type) => [type, []]),
+  );
+  for (const r of results) {
+    const answer = emailExtractionSchema.safeParse(r.response?.output);
+    if (!answer.success) continue; // no valid extraction: no confidences
+    for (const intent of answer.data.intents) {
+      const seen = confidences.get(intent.type) ?? [];
+      confidences.set(intent.type, [...seen, intent.confidence]);
+    }
+  }
+  for (const [type, values] of confidences) {
+    intentRows.push({
+      id,
+      type,
+      inLabel: labelled.includes(type),
+      confidences: values,
+    });
+  }
+}
+const lowest = (row: IntentRow) =>
+  row.confidences.length > 0 ? Math.min(...row.confidences) : -1;
+intentRows.sort((a, b) => lowest(a) - lowest(b) || a.id.localeCompare(b.id));
+
+console.log("\nIntents the model reported, lowest confidence first:");
+console.log("email intent             in label  reported  confidence");
+for (const row of intentRows) {
+  const low = Math.min(...row.confidences).toFixed(2);
+  const high = Math.max(...row.confidences).toFixed(2);
+  const range =
+    row.confidences.length === 0 ? "-" : low === high ? low : `${low}–${high}`;
+  const reported = `${row.confidences.length}/${runs}`;
+  console.log(
+    `${row.id}  ${row.type.padEnd(18)} ${(row.inLabel ? "yes" : "NO").padEnd(9)} ${reported.padEnd(9)} ${range}`,
+  );
+}
+
+// The same reports grouped by confidence. "emails" counts the different
+// emails behind a group: ten runs of one email are not ten new cases.
+const groups = [
+  { name: "below 0.5", from: 0, to: 0.5 },
+  { name: "0.5–0.59", from: 0.5, to: 0.6 },
+  { name: "0.6–0.69", from: 0.6, to: 0.7 },
+  { name: "0.7–0.79", from: 0.7, to: 0.8 },
+  { name: "0.8–0.89", from: 0.8, to: 0.9 },
+  { name: "0.9–1.0", from: 0.9, to: 1.01 },
+];
+console.log("\nconfidence  reports  in label  emails");
+for (const group of groups) {
+  // One entry per report in this group, each carrying the row it came from.
+  const reports = intentRows.flatMap((row) =>
+    row.confidences
+      .filter((c) => c >= group.from && c < group.to)
+      .map(() => row),
+  );
+  const inLabel = reports.filter((row) => row.inLabel).length;
+  const emails = new Set(reports.map((row) => row.id)).size;
+  console.log(
+    `${group.name.padEnd(11)} ${String(reports.length).padStart(7)}  ${String(inLabel).padStart(8)}  ${String(emails).padStart(6)}`,
+  );
 }
