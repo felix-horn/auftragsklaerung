@@ -1,0 +1,31 @@
+# Runs the project's checks on GitHub's machines after every push.
+# No API calls: install, type check, unit tests.
+name: CI
+
+on:
+  push:
+    # Every branch, but no tags: a tag push alone starts no run.
+    branches: ["**"]
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    # A hung run stops after 10 minutes instead of GitHub's default 6 hours.
+    timeout-minutes: 10
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Unit tests
+        run: npm test
