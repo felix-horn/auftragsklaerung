@@ -1,5 +1,6 @@
-# Runs the project's checks on GitHub's machines after every push.
-# No API calls: install, type check, unit tests.
+# Runs the project's checks on GitHub's machines after every push:
+# install, type check, unit tests, then one eval run (22 API calls, about
+# 12.5 US cents) judged by the gate against evals/baseline/.
 name: CI
 
 on:
@@ -29,3 +30,22 @@ jobs:
 
       - name: Unit tests
         run: npm test
+
+      - name: Eval (one run, real API)
+        run: npm run eval -- -o eval-result.json
+        env:
+          # Stored under Settings → Secrets and variables → Actions.
+          # Only this step receives it.
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # promptfoo would exit with 100 whenever an email has a wrong
+          # check, which is every run. The gate step decides instead.
+          PROMPTFOO_FAILED_TEST_EXIT_CODE: 0
+
+      - name: Keep the eval result
+        uses: actions/upload-artifact@v7
+        with:
+          path: eval-result.json
+          archive: false
+
+      - name: Gate
+        run: npm run eval:gate -- eval-result.json
