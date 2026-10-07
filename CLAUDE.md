@@ -1,10 +1,12 @@
 # CLAUDE.md
 
 ## What this is
+
 German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
 (later) ERP tools, retrieval, evals, approval queue. Built module by module.
 
 ## Stack facts — verified, do not re-derive
+
 - Structured output on Anthropic goes via `output_config.format.schema`. Not a
   synthetic tool, not `tools`/`tool_choice`. Verified by dumping the request body;
   see docs/request-body-reference.json.
@@ -59,8 +61,30 @@ German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
 - `--filter-errors-only <id>` re-runs the test case, not the missing repeat: in a
   new eval, as often as `--repeat` says (once without it). It cannot fill a gap in
   a repeated eval; after an ERROR, re-run the whole eval.
+- `promptfoo eval -o <file>.json` writes the same shape as `promptfoo export eval`;
+  evals/report.ts and evals/gate-cli.ts read both. Checked in 3.8.
+- promptfoo 0.123.0 reads `PROMPTFOO_FAILED_TEST_EXIT_CODE` (default 100): the exit
+  code when the pass rate is below `PROMPTFOO_PASS_RATE_THRESHOLD`. CI sets it to 0,
+  so wrong emails and ERRORs no longer fail the eval step; a broken config still
+  does. On GitHub (`GITHUB_ACTIONS` set) promptfoo prints `::notice::` progress
+  lines, which GitHub shows as annotations.
+- GitHub Actions (06.10.2026): runner image ubuntu-24.04, `setup-node` with
+  `node-version: 24` gives Node 24.21.0 and npm 11.19.0 (the same npm as locally,
+  so the same `allowScripts` warnings). `npm ci` takes 40–47 s of a 57–74 s run.
+- A secret that does not exist becomes an empty string: `ANTHROPIC_API_KEY` is
+  empty and Anthropic answers 401 `x-api-key header is required` for all 22 emails
+  (22 ERRORs, gate: no verdict). Re-running that run after storing the secret
+  picked up the new secret (06.10.2026).
+- `npm ci` in CI reports 15 `npm audit` vulnerabilities (06.10.2026), all deep in
+  dev dependencies (mostly promptfoo's tree: simple-git, basic-ftp,
+  source-map-js). Not a failure (exit code 0). Never `npm audit fix --force`: it
+  may change major versions, promptfoo included. See Deferred design questions.
+- `@ai-sdk/anthropic` 4.0.49 accepts `apiKey` or `authToken` (Bearer), but does
+  not do Anthropic's workload identity federation exchange (only Anthropic's own
+  SDKs read `ANTHROPIC_IDENTITY_TOKEN_FILE`). See Deferred design questions.
 
 ## Conventions
+
 - Use `messages`, never the `prompt` shorthand. "The prompt" as a term means the
   system prompt, the user message and the schema descriptions together — all three
   are sent to the model and all three can move a result.
@@ -92,18 +116,21 @@ German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
   deadline.ts) and is never called by the pipeline. evals/assertions/fields.ts
   only applies those helpers per field for promptfoo.
 - Everything promptfoo loads lives in evals/ (config, providers/, assertions/,
-  golden-tests.ts); nothing in src/ imports promptfoo. evals/report.ts lives there
-  too but is not loaded by promptfoo: it reads exported evals.
+  golden-tests.ts); nothing in src/ imports promptfoo. evals/report.ts,
+  evals/gate.ts, evals/gate-cli.ts and evals/baseline/ live there too but are not
+  loaded by promptfoo: they read exported evals.
 - Pipeline functions return data and print nothing. Entry points decide what to
   show: run.ts prints, the promptfoo provider reports to promptfoo.
 
 ## Observed numbers (20-email set, module-2 tag)
+
 - Input: ~1890–2000 tokens per email
 - Output: 75–484 tokens per email; reasoning tokens 0 on clean cases, 200–350 on
   hard ones
 - All 20 schema-valid
 
 ## Observed numbers (22-case set, first promptfoo run, 29.09.2026)
+
 - All 22 schema-valid. 18 s at promptfoo's default concurrency of 4.
 - Input: 1892–2004 tokens per email, 42,924 in total
 - Output: 75–594 tokens per email (mean 178), 3,920 in total. Highest: E-17 594,
@@ -112,6 +139,7 @@ German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
   tokens for claude-sonnet-5; output includes thinking).
 
 ## Observed numbers (22-case set, 3.6 baseline, 01.10.2026)
+
 - Single-run baseline until 3.7: eval-iSz-2026-10-01T16:56:58, 0 errors.
   Tokens 42,924 input / 3,961 output, about 12.5 US cents.
 - Correct out of 22: schemaValid 22, intents 20, requestedAction 21, orderNumbers
@@ -124,8 +152,10 @@ German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
   E-16, E-18, E-21; differences: see Golden set, seen in the first runs.
 
 ## Observed numbers (22-case set, 3.7, ten runs, 02.10.2026)
+
 - Baseline for Open experiments: eval-6y4-2026-10-02T13:59:42 (`--repeat 10`,
-  export ~/eval-3.7-repeat10.json), 220 results, 0 errors. Tokens 429,240 input /
+  export in the repo since 3.8: evals/baseline/eval-3.7-repeat10.json), 220
+  results, 0 errors. Tokens 429,240 input /
   40,425 output, about 1.26 US dollars.
 - Correct out of 220: schemaValid 220, intents 195, requestedAction 210,
   orderNumbers 198, customerNumbers 210, escalationSignals 220, deadlineStated 212,
@@ -138,8 +168,21 @@ German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
   changed (Golden set, seen in the 3.7 ten runs). Only the 5 move a run's total;
   the 6 cap it at 148.
 
+## Observed numbers (22-case set, CI, 06.–07.10.2026)
+
+- First CI eval runs on main (one run each, gate green): 06.10 eval-nmJ 16/22
+  emails, 147/154 fields (the 6 always-wrong checks plus E-12 deadlineStated
+  "30.04."); 07.10 eval-OL4 17/22, 148/154 (the 6 only). Both inside the 3.7 range.
+- Tokens per run 42,924 input / 3,937–4,169 output, about 12.5–12.8 US cents. Eval
+  step 15–17 s at concurrency 4; whole CI run 57–74 s.
+- Step 5 demo (branch demo/break-prompt, deleted afterwards): removing "Do not
+  include requested or promised delivery dates." from the deadlineStated
+  description made E-10 answer deadlineStated "15.04." (label null), and urgency
+  followed (medium, label low). Both checks were 10/10 in the baseline: gate red.
+
 ## Commands
-- `npm test` — runs every *.test.ts file once (vitest); no API calls
+
+- `npm test` — runs every \*.test.ts file once (vitest); no API calls
 - `npx tsc --noEmit` — type check; the only one
 - `npm run extract` — runs the 22 golden-set emails (src/golden/cases.ts) through the extractor
 - `npm run golden:check` — validates the golden set and reports how many cases are labelled
@@ -154,14 +197,21 @@ German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
 - `npm run eval:report -- <export.json>` — evals/report.ts over an exported eval:
   checks not right in every run, totals per run and over all runs, intent
   confidences next to the labels. No API call; refuses an eval with ERRORs.
+- `npm run eval:gate -- <export.json>` — the CI gate (see CI) on one eval run
+  against every export in evals/baseline/. No API call. Exit code 0 green, 1 red,
+  2 no verdict.
+- Every model answer of an export, indented (no API call):
+  `node -e 'const d=require(process.argv[1]); for (const r of d.results.results.sort((a,b)=>a.testIdx-b.testIdx)) console.log(r.testCase.description, JSON.stringify(r.response?.output, null, 2))' <export.json>`
 - `npx promptfoo view` — browser view of past runs: accuracy per field above the
   results, Display → Failures, details per case (Evaluation and Metadata tabs)
 - `PROMPTFOO_DISABLE_TELEMETRY=1 npx promptfoo export eval <eval id> -o <file>` —
   a stored run as JSON; no API call
 
 ## Eval comparison (Module 3.4)
+
 How a model output is compared with a golden label from 3.6 on. Each function is
 tested in the .test.ts file next to it.
+
 - Lists (`intents`, `orderNumbers`, `customerNumbers`, `escalationSignals`):
   `hasSameItems` in src/golden/compare.ts. Order is ignored; duplicates count
   (both sides are sorted, not turned into a Set), so a doubled value in the output
@@ -199,6 +249,7 @@ tested in the .test.ts file next to it.
   one appears, settle it in POLICY.md.
 
 ## Eval harness (Module 3.5)
+
 - evals/providers/extract-email.ts calls extractEmail: the pipeline is under test,
   not the prompt in isolation. It reports token usage to promptfoo.
 - Test cases come from src/golden/cases.ts through evals/golden-tests.ts (one per
@@ -223,6 +274,7 @@ tested in the .test.ts file next to it.
 - extractEmail returns `{ output, usage }` and prints nothing (see Conventions).
 
 ## Eval assertions (Module 3.6)
+
 - Labels travel as test metadata (`metadata.labels`, generated from cases.ts at
   load time). promptfoo stores them with every result, so a stored run shows what
   it was graded against. Assertions read `context.test.metadata`;
@@ -264,6 +316,7 @@ tested in the .test.ts file next to it.
   presence is compared), so an invented detail inside a stated action passes.
 
 ## Noise and comparing runs (Module 3.7)
+
 - The unchanged pipeline moves by chance: in the ten baseline runs a run's total
   ranged over 145–148 field comparisons and 15–17 fully right emails. Never
   compare single runs; one experiment run inside that range shows nothing.
@@ -315,9 +368,65 @@ tested in the .test.ts file next to it.
   0.5–0.59 1/4, below 0.5 none. Only 2–4 emails stand behind each group below
   0.8. The lowest confidence reported was 0.50 (once).
 
+## CI (Module 3.8)
+
+- .github/workflows/ci.yml, one job `checks` on ubuntu-latest, Node 24,
+  `timeout-minutes: 10`. Triggers: push to any branch (`branches: ["**"]`, so tag
+  pushes start no run), every night at 03:17 UTC on the newest commit of main
+  (`schedule`, off the full hour because GitHub delays and may drop scheduled runs
+  then), and the "Run workflow" button (`workflow_dispatch`).
+- Steps, cheapest first (a failing step skips the rest): `npm ci`,
+  `npx tsc --noEmit`, `npm test`, one eval run (`npm run eval -- -o
+eval-result.json`, 22 API calls, about 12.5 US cents), upload of
+  eval-result.json as an artifact (unzipped, kept 90 days, uploaded before the gate
+  so a red run keeps it), `npm run eval:gate -- eval-result.json`.
+- The key: repository secret `ANTHROPIC_API_KEY` (a separate Console key,
+  github-actions-auftragsklaerung), set as `env:` on the eval step only, so the
+  install scripts of `npm ci` never see it. GitHub masks it as `***`. This `env:`
+  belongs to the workflow step; the promptfoo config still never gets an `env:`
+  block.
+- One eval run per push, never ten: CI asks "did a check break that never broke
+  before?", one run answers that. Is the pipeline better or worse is still the
+  ten-run comparison (Noise and comparing runs), by hand.
+- The gate (evals/gate.ts, logic; evals/gate-cli.ts, command): every wrong check
+  of the eval run is looked up in evals/baseline/. Right in every baseline run →
+  the run is red (exit 1); wrong in some or all baseline runs (the flaky and the
+  known failures) → listed, never deciding. Per check, not a count: a count per
+  email or per field lets a wobbling email that happens to be right hide a real
+  break, and misses one email fixed while another breaks in the same field.
+  ERRORs, more than one result per email, or emails/labels that differ from the
+  baseline → no verdict (exit 2), never green. evals/gate.test.ts pins the rules
+  (7 tests, invented emails E-91/E-92); a mutation (rule line → `if (false)`) made
+  the red test fail.
+- A red run is a reason to look, not proof (one failure in 11 results lands in the
+  new run by chance 1 time in 11). After a push: the change is the first suspect,
+  the gate prints `got …, expected …`. After a nightly run with no new commit: run
+  `npm run eval -- --repeat 10` (about 1.25 USD) and judge the check with the 3.7
+  table (10/10 baseline: harmed at 6/10 or lower).
+- evals/baseline/ holds every ten-run export of the current pipeline; the gate
+  adds them up. A ten-run export of the unchanged pipeline that shows no harm (e.g.
+  a red nightly check at 9/10) is added as a second file: that check is then no
+  longer guarded. When an experiment is adopted, its ten-run export replaces the
+  folder's content in the same commit. After a label or email change, run the
+  baseline again first.
+- Notifications (Felix's decision, 3.8): GitHub email for failed runs only, set in
+  GitHub → Settings → Notifications → System → Actions ("Email", "Only notify for
+  failed workflows"). Scheduled runs notify whoever last changed the cron line.
+- Nothing is blocked: commits go straight to main, a red run marks the commit and
+  emails. Required status checks on pull requests would block, but add a branch
+  and a pull request per step for one person; not set up.
+- Repository is private: 2,000 free GitHub minutes a month, a run takes about 1–2.
+  If it is ever made public, GitHub disables scheduled runs after 60 days without
+  repository activity.
+- Changing a prompt on a branch shows the gate at work without touching main
+  (step 5 demo, see Observed numbers (CI)). A schema change on such a throwaway
+  branch skips the request-body dump; changes that stay never do.
+
 ## Open experiments
+
 Each changes one thing and is judged per check against the 3.7 baseline (Noise
 and comparing runs). The target's baseline result is given as right/10.
+
 - Sender premise: remove the claim in DEFAULT_SYSTEM that all senders are
   customers. Target: E-19 (all checks 10/10): only harm can be shown.
 - Field rename: `requestedAction` → `requestStated`. Target: E-14
@@ -351,6 +460,7 @@ and comparing runs). The target's baseline result is given as right/10.
   can only show harm.
 
 ## Deferred design questions
+
 - `other` used as a hedge (E-16, E-17): sharpen prose, remove the enum value,
   or require a justification field. After 3.6. Seen in 3.7: E-16 adds `other` in 3
   of 10 runs; E-17 answers `other` instead of `complaint` in 2 of 10.
@@ -361,20 +471,29 @@ and comparing runs). The target's baseline result is given as right/10.
   optimistic. Whether the queue shows such a mark is Felix's decision there.
 - Split "does this belong in the queue" from "what does the customer want"
   into two fields. After 3.6.
-- Scheduled eval run (3.8): add a `schedule:` trigger to the eval GitHub Actions
-  workflow next to the push/PR trigger, running the golden-set eval daily (e.g.
-  cron `17 3 * * *`, UTC) against the production configuration: same model IDs,
-  same settings. The push gate only answers "did my change break the known
-  cases?". It cannot catch provider-side changes without a code change: an alias
-  repointed to a new model, or infrastructure bugs behind a pinned model ID
-  (precedent: Anthropic's Aug–Sep 2025 incident degraded API output without a
-  model version change). Cost: a few lines of YAML, plus 22 calls per run at about
-  12.5 US cents (Observed numbers). Without it, a provider-side regression goes
-  unnoticed until the people reviewing drafts complain. Related check: all model
-  IDs are pinned; no Gemini `-latest` or `-preview` IDs, and no pre-4.6 dateless
-  Claude aliases such as `claude-sonnet-4-5`. From the 4.6 generation onward the
-  dateless ID is the fixed snapshot. Open for 3.8: how a failed scheduled run
-  reaches Felix (notification channel).
+- Scheduled eval run: built in 3.8 (CI). Why: the push gate only answers "did my
+  change break the known cases?". It cannot catch provider-side changes without a
+  code change: an alias repointed to a new model, or infrastructure bugs behind a
+  pinned model ID (precedent: Anthropic's Aug–Sep 2025 incident degraded API output
+  without a model version change). Related check: all model IDs are pinned; no
+  Gemini `-latest` or `-preview` IDs, and no pre-4.6 dateless Claude aliases such as
+  `claude-sonnet-4-5`. From the 4.6 generation onward the dateless ID is the fixed
+  snapshot.
+- Gate false alarms (3.8): a check right in 10/10 can still fail now and then; the
+  nightly runs measure how often. If more than one false alarm a month: confirm
+  before turning red (re-run the failing email a few times inside the workflow, red
+  only if the check fails again). Not a tolerance such as "164 of 165": it would
+  miss every single-check break.
+- Wobbling checks in CI (3.8): the 5 flaky checks are never judged in CI. Option:
+  run only the wobbling emails ten times per push (about 17 cents) and judge them
+  with the 3.7 table; catches large drops only. Reconsider when the golden set
+  grows and the flaky group gets bigger.
+- Workload identity federation for the CI key (3.8): short-lived tokens instead of
+  a stored key. Needs our own token exchange, because the AI SDK does not do it
+  (Stack facts). Module 11 (secrets management).
+- `npm audit` findings in dev dependencies (3.8): 15 in promptfoo's tree, none
+  reachable from our inputs. Module 8 (production concerns), together with a
+  promptfoo upgrade as its own commit.
 - Golden set size: 22 cases in Module 3. Expand when statistical resolution
   is needed (Module 5 onward), not before. 3.7: calibration and any confidence
   threshold need more emails with wrong intents; only four exist.
@@ -390,6 +509,7 @@ and comparing runs). The target's baseline result is given as right/10.
   set needs fresh emails first.
 
 ## Golden set (Module 3.3)
+
 - 22 cases in src/golden/cases.ts, labelled from docs/POLICY.md alone.
 - Second annotator: Gemini in AI Studio (model gemini-pro-latest, which
   pointed to gemini-3.1-pro-preview at the time; thinking level high), fresh
@@ -409,8 +529,8 @@ and comparing runs). The target's baseline result is given as right/10.
     complaint (first label other; Reklamation includes demanding an Erstattung),
     E-16 intents → cancellation only (first label also document_request; led to
     POLICY v1.3, which now decides it word for word).
-  A model miss on the first three is a model error; on a judgment call it may be
-  a blur case, where the policy leaves room.
+    A model miss on the first three is a model error; on a judgment call it may be
+    a blur case, where the policy leaves room.
 - Every difference was resolved against POLICY.md. One of them (E-16) led
   to a policy clarification (v1.3). v1.2, the Kaufanfrage rename, came
   earlier, from reviewing LABELLING.md.
