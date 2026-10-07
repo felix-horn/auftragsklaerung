@@ -1,12 +1,20 @@
-# Runs the project's checks on GitHub's machines after every push:
-# install, type check, unit tests, then one eval run (22 API calls, about
-# 12.5 US cents) judged by the gate against evals/baseline/.
+# Runs the project's checks on GitHub's machines after every push, every
+# night, and on demand: install, type check, unit tests, then one eval run
+# (22 API calls, about 12.5 US cents) judged by the gate against
+# evals/baseline/.
 name: CI
 
 on:
   push:
     # Every branch, but no tags: a tag push alone starts no run.
     branches: ["**"]
+  schedule:
+    # Every night at 03:17 UTC, on the newest commit of main. Catches changes
+    # on Anthropic's side that come without a commit. Not on the full hour:
+    # GitHub delays scheduled runs then, and under load drops some.
+    - cron: "17 3 * * *"
+  # Adds a "Run workflow" button in the Actions tab: a run without a push.
+  workflow_dispatch:
 
 jobs:
   checks:
