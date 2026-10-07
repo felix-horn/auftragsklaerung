@@ -55,23 +55,33 @@ if (verdict.outcome === "no verdict") {
   process.exit(2);
 }
 
-const line = (f: Finding) =>
-  `  ${f.id}  ${f.check.padEnd(17)} right in ${f.baselineRight}/${f.baselineRuns} baseline runs: ${f.reason}`;
-const list = (findings: Finding[]) =>
-  findings.length > 0 ? findings.map(line).join("\n") : "  none";
-
-console.log("\nWrong, but also wrong in some or all baseline runs:");
-console.log(list(verdict.known));
-console.log("\nWrong, but right in every baseline run:");
-console.log(list(verdict.regressions));
+// The checks that decide come first, marked with ✗. The known failures
+// follow under their own heading, because they never change the result.
+const line = (marker: string, f: Finding) =>
+  `  ${marker} ${f.id}  ${f.check.padEnd(17)} right in ${f.baselineRight}/${f.baselineRuns} baseline runs: ${f.reason}`;
 
 if (verdict.outcome === "red") {
   console.log(
-    `\nRED: ${verdict.regressions.length} check(s) that never failed in the baseline failed. A reason to look, not proof: see CLAUDE.md.`,
+    `\nRED: ${verdict.regressions.length} check(s) wrong that were right in every baseline run.`,
   );
+  console.log("These decide the result:");
+  for (const f of verdict.regressions) console.log(line("✗", f));
   process.exitCode = 1;
 } else {
   console.log(
     "\nGREEN: every check that was right in every baseline run is right.",
   );
+}
+
+console.log(
+  "\nAlso wrong, as in some or all baseline runs (expected, not deciding):",
+);
+console.log(
+  verdict.known.length > 0
+    ? verdict.known.map((f) => line(" ", f)).join("\n")
+    : "  none",
+);
+
+if (verdict.outcome === "red") {
+  console.log("\nA red run is a reason to look, not proof: see CLAUDE.md.");
 }
