@@ -1,0 +1,358 @@
+[
+  {
+    "id": "E-01",
+    "labels": {
+      "intents": [
+        "order_status"
+      ],
+      "requestedAction": "Versandstatus mitteilen",
+      "orderNumbers": [
+        "A-61150"
+      ],
+      "customerNumbers": [
+        "K-40928"
+      ],
+      "escalationSignals": [],
+      "deadlineStated": null,
+      "urgency": "low"
+    }
+  },
+  {
+    "id": "E-02",
+    "labels": {
+      "intents": [
+        "complaint"
+      ],
+      "requestedAction": "Zugehörigkeit der Dichtung prüfen",
+      "orderNumbers": [
+        "A-55210",
+        "A-55231"
+      ],
+      "customerNumbers": [],
+      "escalationSignals": [],
+      "deadlineStated": null,
+      "urgency": "low"
+    }
+  },
+  {
+    "id": "E-03",
+    "labels": {
+      "intents": [
+        "purchase_inquiry"
+      ],
+      "requestedAction": "Rabattstaffelung und Lieferbedingungen mitteilen",
+      "orderNumbers": [],
+      "customerNumbers": [],
+      "escalationSignals": [],
+      "deadlineStated": null,
+      "urgency": "low"
+    }
+  },
+  {
+    "id": "E-04",
+    "labels": {
+      "intents": [
+        "invoice_question"
+      ],
+      "requestedAction": "Betrag klären",
+      "orderNumbers": [],
+      "customerNumbers": [],
+      "escalationSignals": [
+        "repeat_contact",
+        "threat_to_cancel"
+      ],
+      "deadlineStated": "bis morgen",
+      "urgency": "high"
+    }
+  },
+  {
+    "id": "E-05",
+    "labels": {
+      "intents": [
+        "spam"
+      ],
+      "requestedAction": null,
+      "orderNumbers": [],
+      "customerNumbers": [],
+      "escalationSignals": [],
+      "deadlineStated": null,
+      "urgency": "low"
+    }
+  },
+  {
+    "id": "E-06",
+    "labels": {
+      "intents": [
+        "order_status"
+      ],
+      "requestedAction": "Versandstatus mitteilen",
+      "orderNumbers": [
+        "A-44821"
+      ],
+      "customerNumbers": [],
+      "escalationSignals": [],
+      "deadlineStated": null,
+      "urgency": "low"
+    }
+  },
+  {
+    "id": "E-07",
+    "labels": {
+      "intents": [
+        "order_status"
+      ],
+      "requestedAction": "Lieferzeitpunkt mitteilen",
+      "orderNumbers": [],
+      "customerNumbers": [],
+      "escalationSignals": [],
+      "deadlineStated": null,
+      "urgency": "low"
+    }
+  },
+  {
+    "id": "E-08",
+    "labels": {
+      "intents": [
+        "cancellation"
+      ],
+      "requestedAction": "Stornierung bestätigen",
+      "orderNumbers": [
+        "A-52880"
+      ],
+      "customerNumbers": [
+        "66017"
+      ],
+      "escalationSignals": [],
+      "deadlineStated": "bis Freitag",
+      "urgency": "medium"
+    }
+  },
+  {
+    "id": "E-09",
+    "labels": {
+      "intents": [
+        "complaint",
+        "purchase_inquiry"
+      ],
+      "requestedAction": "Reklamation bearbeiten; Angebot erstellen",
+      "orderNumbers": [
+        "A-47190"
+      ],
+      "customerNumbers": [],
+      "escalationSignals": [],
+      "deadlineStated": null,
+      "urgency": "low"
+    }
+  },
+  {
+    "id": "E-10",
+    "labels": {
+      "intents": [
+        "purchase_inquiry"
+      ],
+      "requestedAction": "Angebot erstellen",
+      "orderNumbers": [],
+      "customerNumbers": [],
+      "escalationSignals": [],
+      "deadlineStated": null,
+      "urgency": "low"
+    }
+  },
+  {
+    "id": "E-11",
+    "labels": {
+      "intents": [
+        "order_status"
+      ],
+      "requestedAction": "Auskunft geben",
+      "orderNumbers": [
+        "A-33450"
+      ],
+      "customerNumbers": [],
+      "escalationSignals": [],
+      "deadlineStated": null,
+      "urgency": "low"
+    }
+  },
+  {
+    "id": "E-12",
+    "labels": {
+      "intents": [
+        "invoice_question"
+      ],
+      "requestedAction": "Gutschrift erstellen",
+      "orderNumbers": [
+        "A-48120"
+      ],
+      "customerNumbers": [],
+      "escalationSignals": [
+        "repeat_contact",
+        "legal_threat"
+      ],
+      "deadlineStated": "bis zum 30.04.",
+      "urgency": "high"
+    },
+    "unsicher": "Die gewünschte Gutschrift deutet auf Reklamation hin, aber da der Anlass eine beanstandete Rechnung (doppelte Rechnung) ist, gilt das Ausschlusskriterium unter Reklamation, wodurch es zur Rechnungsfrage wird."
+  },
+  {
+    "id": "E-13",
+    "labels": {
+      "intents": [
+        "document_request"
+      ],
+      "requestedAction": "Katalog zusenden",
+      "orderNumbers": [],
+      "customerNumbers": [],
+      "escalationSignals": [],
+      "deadlineStated": null,
+      "urgency": "low"
+    }
+  },
+  {
+    "id": "E-14",
+    "labels": {
+      "intents": [
+        "complaint"
+      ],
+      "requestedAction": null,
+      "orderNumbers": [],
+      "customerNumbers": [],
+      "escalationSignals": [
+        "production_halt"
+      ],
+      "deadlineStated": null,
+      "urgency": "high"
+    }
+  },
+  {
+    "id": "E-15",
+    "labels": {
+      "intents": [
+        "document_request"
+      ],
+      "requestedAction": "Auftragsbestätigung nachsenden",
+      "orderNumbers": [
+        "A-51123"
+      ],
+      "customerNumbers": [
+        "K-88231"
+      ],
+      "escalationSignals": [],
+      "deadlineStated": null,
+      "urgency": "low"
+    }
+  },
+  {
+    "id": "E-16",
+    "labels": {
+      "intents": [
+        "cancellation"
+      ],
+      "requestedAction": "Bestellung stornieren; Rücksendeetikett zusenden",
+      "orderNumbers": [
+        "A-52140"
+      ],
+      "customerNumbers": [
+        "K-90233"
+      ],
+      "escalationSignals": [],
+      "deadlineStated": null,
+      "urgency": "low"
+    }
+  },
+  {
+    "id": "E-17",
+    "labels": {
+      "intents": [
+        "complaint"
+      ],
+      "requestedAction": "Rückerstattung vornehmen",
+      "orderNumbers": [
+        "A-61002"
+      ],
+      "customerNumbers": [],
+      "escalationSignals": [],
+      "deadlineStated": null,
+      "urgency": "low"
+    }
+  },
+  {
+    "id": "E-18",
+    "labels": {
+      "intents": [
+        "invoice_question"
+      ],
+      "requestedAction": "Zahlungspflicht klären",
+      "orderNumbers": [
+        "A-59401"
+      ],
+      "customerNumbers": [],
+      "escalationSignals": [
+        "repeat_contact"
+      ],
+      "deadlineStated": null,
+      "urgency": "medium"
+    }
+  },
+  {
+    "id": "E-19",
+    "labels": {
+      "intents": [
+        "spam"
+      ],
+      "requestedAction": null,
+      "orderNumbers": [],
+      "customerNumbers": [],
+      "escalationSignals": [],
+      "deadlineStated": null,
+      "urgency": "low"
+    }
+  },
+  {
+    "id": "E-20",
+    "labels": {
+      "intents": [
+        "other",
+        "document_request"
+      ],
+      "requestedAction": "Neue Lieferadresse hinterlegen; Katalog zusenden",
+      "orderNumbers": [],
+      "customerNumbers": [
+        "K-71104"
+      ],
+      "escalationSignals": [],
+      "deadlineStated": null,
+      "urgency": "low"
+    }
+  },
+  {
+    "id": "E-21",
+    "labels": {
+      "intents": [
+        "order_status"
+      ],
+      "requestedAction": "Lieferstatus mitteilen",
+      "orderNumbers": [],
+      "customerNumbers": [
+        "K-62418"
+      ],
+      "escalationSignals": [],
+      "deadlineStated": null,
+      "urgency": "low"
+    }
+  },
+  {
+    "id": "E-22",
+    "labels": {
+      "intents": [
+        "document_request"
+      ],
+      "requestedAction": "Rechnung zusenden",
+      "orderNumbers": [],
+      "customerNumbers": [],
+      "escalationSignals": [],
+      "deadlineStated": null,
+      "urgency": "low"
+    }
+  }
+]

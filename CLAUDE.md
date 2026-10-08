@@ -519,6 +519,18 @@ and comparing runs). The target's baseline result is given as right/10.
   vs null), orderNumbers 21/22, customerNumbers 21/22, escalationSignals,
   deadlineStated and urgency 22/22. After reconciliation it is 100% by
   construction and says nothing.
+- The second annotator's material, byte for byte as downloaded:
+  docs/second-annotator-3.3-prompt.md (the prompt, with the 22 email texts;
+  POLICY.md and LABELLING.md were attached as files) and
+  docs/second-annotator-3.3-answer.json (Gemini's answer, saved by AI Studio
+  as "ai_studio_code (1).txt"). Checked 08.10.2026: the 22 texts are
+  identical to src/golden/cases.ts, and the answer agrees with today's labels
+  in 154/154 field comparisons (requestedAction present vs null), because all
+  six differences below were resolved toward its reading. Records only:
+  nothing reads them, and they never become prompt material (golden texts
+  and answers; see Deferred design questions, POLICY.md's examples). When
+  the step repeats (Module 5), reuse this prompt with the golden set of that
+  time, so the new agreement number compares with this one.
 - The six fields that differed, each resolved by Felix in 3.3 toward the second
   annotator's reading:
   - decided by POLICY.md word for word: E-04 orderNumbers (an invoice number is
