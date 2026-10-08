@@ -168,13 +168,18 @@ German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
   changed (Golden set, seen in the 3.7 ten runs). Only the 5 move a run's total;
   the 6 cap it at 148.
 
-## Observed numbers (22-case set, CI, 06.–07.10.2026)
+## Observed numbers (22-case set, CI, from 06.10.2026)
 
 - First CI eval runs on main (one run each, gate green): 06.10 eval-nmJ 16/22
   emails, 147/154 fields (the 6 always-wrong checks plus E-12 deadlineStated
   "30.04."); 07.10 eval-OL4 17/22, 148/154 (the 6 only). Both inside the 3.7 range.
-- Tokens per run 42,924 input / 3,937–4,169 output, about 12.5–12.8 US cents. Eval
-  step 15–17 s at concurrency 4; whole CI run 57–74 s.
+- Scheduled runs (the false-alarm count, see Gate false alarms under Deferred
+  design questions): 08.10 eval-ot3, gate green, 17/22 emails, 148/154 fields
+  (the 6 always-wrong checks only), inside the 3.7 range. Due at 03:17 UTC,
+  started at 10:43 UTC: 7 h 26 min late (GitHub documents delays under load).
+  False alarms so far: 0 in 1 scheduled run.
+- Tokens per run 42,924 input / 3,937–4,189 output, about 12.5–12.8 US cents. Eval
+  step 15–17 s at concurrency 4; whole CI run 57–81 s.
 - Step 5 demo (branch demo/break-prompt, deleted afterwards): removing "Do not
   include requested or promised delivery dates." from the deadlineStated
   description made E-10 answer deadlineStated "15.04." (label null), and urgency
@@ -403,10 +408,21 @@ eval-result.json`, 22 API calls, about 12.5 US cents), upload of
   the gate prints `got …, expected …`. After a nightly run with no new commit: run
   `npm run eval -- --repeat 10` (about 1.25 USD) and judge the check with the 3.7
   table (10/10 baseline: harmed at 6/10 or lower).
-- evals/baseline/ holds every ten-run export of the current pipeline; the gate
-  adds them up. A ten-run export of the unchanged pipeline that shows no harm (e.g.
-  a red nightly check at 9/10) is added as a second file: that check is then no
-  longer guarded. When an experiment is adopted, its ten-run export replaces the
+- evals/baseline/ holds the exports of the current pipeline; the gate adds them
+  up, whatever the number of runs per file. After a red run on an unchanged
+  pipeline whose ten-run check shows no harm, add two files in one commit: the
+  ten-run export and the red run's own eval-result.json (artifact on the run
+  page; rename it, since every run's artifact has that name). The red run is
+  the only evidence that the check can fail: a check failing about 1 time in 30
+  comes back 10/10 in ten new runs about 70% of the time ((29/30)^10 ≈ 0.71),
+  so with the ten-run file alone it would stay guarded (20/20) and the false
+  alarm could repeat; with both it is 20/21. Checked with a constructed run
+  (E-01 orderNumbers broken; 3.8, repeated 08.10.2026): red against the 3.7
+  ten runs alone ("right in 10/10"), green with that run's own export added
+  as a second file ("right in 10/11"). Green nightly runs are not added: they
+  contain no wrong guarded check, so they change no verdict; they count toward
+  the false-alarm tally (Observed numbers (CI)) and stay on GitHub as artifacts
+  for 90 days. When an experiment is adopted, its ten-run export replaces the
   folder's content in the same commit. After a label or email change, run the
   baseline again first.
 - Notifications (Felix's decision, 3.8): GitHub email for failed runs only, set in

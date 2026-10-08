@@ -1,11 +1,12 @@
 import { z } from "zod";
 
 // The gate (Module 3.8): judges one eval run against the baseline.
-// The baseline is every exported ten-run eval of the unchanged pipeline in
-// evals/baseline/. A check (one of the eight results for one email) that was
-// right in every baseline run is guarded: if it is wrong in the eval run,
-// the gate turns red. A check that was wrong in some or all baseline runs is
-// listed, but never decides.
+// The baseline is every export of the unchanged pipeline in evals/baseline/,
+// added up whatever the number of runs per file (which files: CLAUDE.md, CI).
+// A check (one of the eight results for one email) that was right in every
+// baseline run is guarded: if it is wrong in the eval run, the gate turns red.
+// A check that was wrong in some or all baseline runs is listed, but never
+// decides.
 // Like report.ts, the gate grades nothing itself: pass/fail and the answers
 // are what the assertions stored. gate-cli.ts reads the files and prints.
 
