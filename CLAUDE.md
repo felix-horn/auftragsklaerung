@@ -440,8 +440,12 @@ eval-result.json`, 22 API calls, about 12.5 US cents), upload of
 
 ## Open experiments
 
-Each changes one thing and is judged per check against the 3.7 baseline (Noise
-and comparing runs). The target's baseline result is given as right/10.
+Each changes one thing and is judged per check against the current baseline
+(Noise and comparing runs): the 3.7 ten runs until an experiment is adopted,
+then that experiment's ten runs (CI, evals/baseline/). The target's result in
+the 3.7 baseline is given as right/10. Module 5 of the roadmap runs three of
+them, in this order: Prefix assignment, Unnamed numbers, Reason vs. request.
+The others wait for the larger golden set (Module 6 onward).
 
 - Sender premise: remove the claim in DEFAULT_SYSTEM that all senders are
   customers. Target: E-19 (all checks 10/10): only harm can be shown.
@@ -480,7 +484,7 @@ and comparing runs). The target's baseline result is given as right/10.
 - `other` used as a hedge (E-16, E-17): sharpen prose, remove the enum value,
   or require a justification field. After 3.6. Seen in 3.7: E-16 adds `other` in 3
   of 10 runs; E-17 answers `other` instead of `complaint` in 2 of 10.
-- Confidence as a review mark in the approval queue (Module 7): in the 3.7
+- Confidence as a review mark in the approval queue (Module 8): in the 3.7
   baseline every intent reported at 0.85 or higher was right and all 28 wrong ones
   were at 0.80 or lower, but 18 right reports (E-17, E-18) were below 0.85 too.
   The 0.85 line was read off the same data, so on new emails it is too
@@ -506,18 +510,18 @@ and comparing runs). The target's baseline result is given as right/10.
   grows and the flaky group gets bigger.
 - Workload identity federation for the CI key (3.8): short-lived tokens instead of
   a stored key. Needs our own token exchange, because the AI SDK does not do it
-  (Stack facts). Module 11 (secrets management).
+  (Stack facts). Module 12 (secrets management).
 - `npm audit` findings in dev dependencies (3.8): 15 in promptfoo's tree, none
-  reachable from our inputs. Module 8 (production concerns), together with a
+  reachable from our inputs. Module 9 (production concerns), together with a
   promptfoo upgrade as its own commit.
 - Golden set size: 22 cases in Module 3. Expand when statistical resolution
-  is needed (Module 5 onward), not before. 3.7: calibration and any confidence
+  is needed (Module 6 onward), not before. 3.7: calibration and any confidence
   threshold need more emails with wrong intents; only four exist.
 - Unprefixed identifiers recorded as written (R-09 step 2) get normalised at
   the ERP lookup. Module 4.
-- Reply drafting is Module 5b (added to the roadmap in 3.1). The LLM-as-judge
-  eval for drafts and the reply-language decision go with it.
-- Does `requestedAction` earn its place in the approval queue UI? Module 7.
+- Reply drafting is Module 6b (added to the roadmap in 3.1 as Module 5b). The
+  LLM-as-judge eval for drafts and the reply-language decision go with it.
+- Does `requestedAction` earn its place in the approval queue UI? Module 8.
 - POLICY.md's examples are taken from the golden-set emails. So POLICY.md, or
   any excerpt of it, must never be put into the prompt: the eval would then
   measure how well the model repeats examples it was shown, not how it handles
@@ -545,8 +549,9 @@ and comparing runs). The target's baseline result is given as right/10.
   six differences below were resolved toward its reading. Records only:
   nothing reads them, and they never become prompt material (golden texts
   and answers; see Deferred design questions, POLICY.md's examples). When
-  the step repeats (Module 5), reuse this prompt with the golden set of that
-  time, so the new agreement number compares with this one.
+  the step repeats (when the golden set grows, Module 6 onward), reuse this
+  prompt with the golden set of that time, so the new agreement number
+  compares with this one.
 - The six fields that differed, each resolved by Felix in 3.3 toward the second
   annotator's reading:
   - decided by POLICY.md word for word: E-04 orderNumbers (an invoice number is
