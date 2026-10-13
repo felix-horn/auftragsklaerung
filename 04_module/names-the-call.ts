@@ -1,13 +1,12 @@
 // Module 4.1, part 1: the model names a function; our code decides what happens.
 // One request to Anthropic. The result of the function never goes back to the
 // model.
-//   npx tsx 04_module/names-the-call.ts             fake Anthropic, no API call
-//   REAL_API=1 npx tsx 04_module/names-the-call.ts  one real call
+//   npx tsx 04_module/names-the-call.ts
 import "dotenv/config";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { generateText, tool } from "ai";
 import { z } from "zod";
-import { fakeAnthropic, loggingFetch } from "./wire.js";
+import { loggingFetch } from "./wire.js";
 
 // The ERP stand-in from Module 1, unchanged.
 function getOrderStatus(orderNumber: string): string {
@@ -30,32 +29,7 @@ const getOrderStatusTool = tool({
   }),
 });
 
-// For the fake: the shape of Anthropic's round-1 answer in your Module 1 run,
-// with the thinking block left out and the field names of this tool.
-const preparedRound1 = {
-  id: "msg_fake_1",
-  type: "message",
-  role: "assistant",
-  model: "claude-sonnet-5",
-  content: [
-    {
-      type: "tool_use",
-      id: "toolu_fake_1",
-      name: "getOrderStatus",
-      input: { orderNumber: "44821" },
-    },
-  ],
-  stop_reason: "tool_use",
-  stop_sequence: null,
-  usage: { input_tokens: 476, output_tokens: 81 },
-};
-
-const realApi = process.env.REAL_API === "1";
-const anthropic = createAnthropic({
-  // The fake needs no key; the real call reads ANTHROPIC_API_KEY from .env.
-  apiKey: realApi ? undefined : "not-used-by-the-fake",
-  fetch: loggingFetch(realApi ? fetch : fakeAnthropic([preparedRound1])),
-});
+const anthropic = createAnthropic({ fetch: loggingFetch });
 
 const result = await generateText({
   model: anthropic("claude-sonnet-5"),
