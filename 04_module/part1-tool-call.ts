@@ -6,7 +6,7 @@ import "dotenv/config";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { generateText, tool } from "ai";
 import { z } from "zod";
-import { loggingFetch } from "./wire.js";
+import { loggingFetch } from "./logging-fetch.js";
 
 // The ERP stand-in from Module 1, unchanged.
 function getOrderStatus(orderNumber: string): string {
@@ -54,4 +54,4 @@ for (const call of result.staticToolCalls) {
     console.log("--- our code runs the function ---");
     console.log(getOrderStatus(call.input.orderNumber));
   }
-}
+}           

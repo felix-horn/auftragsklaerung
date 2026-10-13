@@ -7,3 +7,5 @@ export const loggingFetch: typeof fetch = async (input, init) => {
   console.log(JSON.stringify(JSON.parse(String(init?.body)), null, 2));
   return fetch(input, init);
 };
+
+
