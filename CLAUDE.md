@@ -83,6 +83,54 @@ German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
   not do Anthropic's workload identity federation exchange (only Anthropic's own
   SDKs read `ANTHROPIC_IDENTITY_TOKEN_FILE`). See Deferred design questions.
 
+### Tool calling (Module 4.1; `ai` 7.0.93, `@ai-sdk/anthropic` 4.0.49)
+
+Each fact says how it was checked: in the source (node_modules/ai/src), with a
+fake fetch (no API), or in a real run of a 04_module/ script.
+
+- `result.output` is parsed from the last step only, and only if that step's
+  finishReason is `stop`, or is not `tool-calls` and has text
+  (generate-text.ts lines 1563–1579). Otherwise reading it throws
+  `NoOutputGeneratedError`. An answer with JSON text and a tool call ends in
+  `tool-calls`: `text` holds the JSON, `output` throws. Source; real runs for a
+  tool call only (throws) and for an extraction after a lookup (parsed from
+  request 2); fake fetch for the mixed answer.
+- `result.text` is the last step's text and never throws (an empty string if
+  the loop stopped on a tool call). `result.toolCalls` and `result.toolResults`
+  collect every step. Source.
+- Without `stopWhen` the SDK sends one request. A tool with `execute` still
+  runs; its result lands in `result.toolResults` and the model never sees it.
+  With `stopWhen: isStepCount(n)` the SDK sends the result back and asks again,
+  up to n requests. Fake fetch; the loop also in real runs.
+- `toolChoice` on the wire: `auto` → `{"type":"auto"}`, `required` →
+  `{"type":"any"}`, `{ type: "tool", toolName }` →
+  `{"type":"tool","name":…}`, `none` → the provider removes `tools` and
+  `tool_choice` from the body (15 input tokens; the model no longer knows the
+  tools exist). Real runs.
+- Forced tool use (`required` or a named tool) is accepted by claude-sonnet-5.
+  Per Anthropic's thinking docs the answer then starts with the tool call,
+  without thinking, and Claude Opus 5.5, Sonnet 5.5, Fable 5.1 and Mythos 5.1
+  refuse forced tool use with a 400. Check this before changing the model ID.
+  Real run for sonnet-5 (no thinking block, but `auto` had none either on that
+  question); docs only for the rest.
+- Tool inputs are not schema-enforced: a forced checkStockLevel came back with
+  `{ orderNumber: 44821 }` (wrong field, a number). The SDK does not throw; it
+  keeps the call with `invalid: true` in `dynamicToolCalls` (not
+  `staticToolCalls`) and adds a `tool-error` part, so a hand loop over
+  `staticToolCalls` never sees it. `strict: true` on the tool is the candidate
+  fix; not tried (4.4). Real run; source and fake fetch for where it is kept.
+- An error thrown in `execute` goes to the model as a `tool_result` with
+  `is_error: true` and the content `Error: <message>`. Fake fetch.
+- `toolsContext` values reach `execute` as `context` and never appear in the
+  request body, so they can carry what the model must neither see nor set, such
+  as the requester's identity (4.4). Fake fetch.
+- Thinking blocks from a tool turn go back in the next request unchanged,
+  signature included; the SDK does this. Real run.
+- AI SDK 7 renames: `instructions` replaces `system` (deprecated, still
+  works); `isStepCount` replaces `stepCountIs` (kept as an alias). Source.
+  src/extract.ts still passes `system`; renaming it is its own commit, with the
+  request-body dump (Conventions).
+
 ## Conventions
 
 - Use `messages`, never the `prompt` shorthand. "The prompt" as a term means the
@@ -121,6 +169,10 @@ German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
   loaded by promptfoo: they read exported evals.
 - Pipeline functions return data and print nothing. Entry points decide what to
   show: run.ts prints, the promptfoo provider reports to promptfoo.
+- 04_module/ holds Module 4.1's teaching scripts and experiments. They call the
+  API directly, with no fake switch (Felix's decision, 4.1: easier to read is
+  worth the occasional cent), and print every request and response body through
+  04_module/logging-fetch.ts. Nothing in src/ imports them; tsc checks them.
 
 ## Observed numbers (20-email set, module-2 tag)
 
@@ -177,9 +229,11 @@ German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
   design questions): 08.10 eval-ot3, gate green, 17/22 emails, 148/154 fields
   (the 6 always-wrong checks only), inside the 3.7 range. Due at 03:17 UTC,
   started at 10:43 UTC: 7 h 26 min late (GitHub documents delays under load).
-  False alarms so far: 0 in 1 scheduled run.
+  08.–16.10 (runs #8 to #22, read off the Actions list on 17.10): one scheduled
+  run every day, none dropped, all nine green; started 5 h 00 min to 7 h 44 min
+  late (08:17–11:01 UTC). False alarms so far: 0 in 9 scheduled runs.
 - Tokens per run 42,924 input / 3,937–4,189 output, about 12.5–12.8 US cents. Eval
-  step 15–17 s at concurrency 4; whole CI run 57–81 s.
+  step 15–17 s at concurrency 4; whole CI run 57–83 s.
 - Step 5 demo (branch demo/break-prompt, deleted afterwards): removing "Do not
   include requested or promised delivery dates." from the deadlineStated
   description made E-10 answer deadlineStated "15.04." (label null), and urgency
@@ -211,6 +265,9 @@ German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
   results, Display → Failures, details per case (Evaluation and Metadata tabs)
 - `PROMPTFOO_DISABLE_TELEMETRY=1 npx promptfoo export eval <eval id> -o <file>` —
   a stored run as JSON; no API call
+- `npx tsx 04_module/<file>.ts` — a Module 4.1 script (see Ways to use a tool);
+  1–3 API calls, under 2 US cents. part4-tool-choice.ts takes
+  `auto`, `required`, `none` or `checkStockLevel`.
 
 ## Eval comparison (Module 3.4)
 
@@ -437,6 +494,50 @@ eval-result.json`, 22 API calls, about 12.5 US cents), upload of
 - Changing a prompt on a branch shows the gate at work without touching main
   (step 5 demo, see Observed numbers (CI)). A schema change on such a throwaway
   branch skips the request-body dump; changes that stay never do.
+
+## Ways to use a tool (Module 4.1)
+
+One file per way in 04_module/. Parts 1–4 ask "Where is my order 44821?" with
+two tools, getOrderStatus and checkStockLevel (invented data). Every number
+below is from one run: what can happen, not how often.
+
+| Way | Who picks the call | Who runs it | Result back to the model | File |
+|---|---|---|---|---|
+| Code only | code, from fields it already has | code | no | none (today's pipeline) |
+| Routing: the model names the call, code acts | model: a `tool_use` block, or a field in the structured answer | code | no | part1, round 1 only (see its comment); experiment-extraction-plus-tool.ts |
+| Native tool calling, loop by hand | model | our loop | yes, in a new request with the whole history | part1-loop-by-hand.ts |
+| Native tool calling, loop by the SDK | model | the SDK (`execute`, `stopWhen`) | yes | part2-loop-by-sdk.ts |
+| Prompt-based tool calling (ReAct-style) | model: an `action` field in structured output, no `tools` | our loop | yes, as a user message | part3-action-field.ts |
+
+- Parts 1 and 2 send the same two requests and give the same answer. The
+  difference between the two files is what the SDK's loop takes over: the
+  switch over tool names, appending the results, the stop condition. Part 3
+  gets the same answer in two requests with no `tools` in either.
+- part4-tool-choice.ts, one request per setting: `auto` 655 input tokens,
+  getOrderStatus; `required` 775, getOrderStatus; `none` 15, no tool, and the
+  model answered as a general chatbot ("retailers"); forced `checkStockLevel`
+  784, input `{ orderNumber: 44821 }`. Two short tools cost about 640 input
+  tokens per request; one tool on top of the extraction about 460–570.
+- The extraction with a getOrderStatus tool, E-06, DEFAULT_SYSTEM and
+  src/schema.ts unchanged:
+  - no field for the choice (first version of experiment-extraction-plus-tool.ts,
+    not committed): the answer was a tool call only, no extraction
+    (`NoOutputGeneratedError`).
+  - a `nextAction` field added in the experiment file only, its description
+    saying the tools are listed only to be named there
+    (experiment-extraction-plus-tool.ts): one request, a complete extraction
+    plus `nextAction` getOrderStatus "A-44821", no tool call. 2,696 input tokens
+    (the extraction alone 1,892–2,004), 172 output (41 thinking).
+  - `execute` plus `stopWhen: isStepCount(3)`
+    (experiment-extraction-after-lookup.ts; the tool's record names customer
+    K-40928): request 1 called getOrderStatus, request 2 returned the
+    extraction, and `output` was parsed from it. customerNumbers stayed `[]`
+    (label `[]`): the ERP's number did not leak in this run. 2,461 + 2,604
+    input, 91 + 98 output tokens, about 1.2 US cents.
+- Not decided in 4.1: where the ERP lookup sits. 4.2 chooses between routing
+  inside the extraction (`nextAction`), the extraction after a lookup in one
+  SDK loop, and a separate step after the extraction (code only, or a tool loop
+  of its own). Whatever the extraction sees, R-01 still applies to it.
 
 ## Open experiments
 
