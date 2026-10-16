@@ -18,16 +18,33 @@ function getOrderStatus(orderNumber: string): string {
   return fakeOrders[orderNumber] ?? `no order found with number ${orderNumber}`;
 }
 
-// No `execute` function: the SDK runs nothing, our loop below does.
-const getOrderStatusTool = tool({
-  description:
-    "Look up the current shipping/processing status of a customer order by its order number.",
-  inputSchema: z.object({
-    orderNumber: z.string().describe("The order number, e.g. '44821'."),
+// A second function, only to show where a second tool goes. Fixed answer.
+function checkStockLevel(partNumber: string): string {
+  return `${partNumber}: 120 in stock`;
+}
+
+// No `execute` functions: the SDK runs nothing, our loop below does.
+const tools = {
+  getOrderStatus: tool({
+    description:
+      "Look up the current shipping/processing status of a customer order by its order number.",
+    inputSchema: z.object({
+      orderNumber: z.string().describe("The order number, e.g. '44821'."),
+    }),
   }),
-});
+  checkStockLevel: tool({
+    description: "Look up how many units of a part are in stock.",
+    inputSchema: z.object({
+      partNumber: z.string().describe("The part number, e.g. '7745-B'."),
+    }),
+  }),
+  // no additional `execute` property to otherwise same as `getOrderStatusTool` in part2-loop-by-sdk.ts
+
+};
 
 const anthropic = createAnthropic({ fetch: loggingFetch });
+
+// Almost the same as part2-loop-by-sdk.ts
 
 // The whole conversation; every request sends all of it.
 const messages: ModelMessage[] = [
@@ -39,7 +56,7 @@ const messages: ModelMessage[] = [
 for (let round = 1; round <= 5; round++) {
   const result = await generateText({
     model: anthropic("claude-sonnet-5"),
-    tools: { getOrderStatus: getOrderStatusTool },
+    tools,
     messages,
     maxOutputTokens: 500,
   });
@@ -60,14 +77,23 @@ for (let round = 1; round <= 5; round++) {
   // tool message. toolCallId ties each result to its request.
   messages.push({
     role: "tool",
-    content: result.staticToolCalls.map((call) => ({
-      type: "tool-result" as const,
-      toolCallId: call.toolCallId,
-      toolName: call.toolName,
-      output: {
-        type: "text" as const,
-        value: getOrderStatus(call.input.orderNumber),
-      },
-    })),
+    content: result.staticToolCalls.map((call) => {
+      // Which function to run is our code's job: we look at the tool's name.
+      let value: string;
+      switch (call.toolName) {
+        case "getOrderStatus":
+          value = getOrderStatus(call.input.orderNumber);
+          break;
+        case "checkStockLevel":
+          value = checkStockLevel(call.input.partNumber);
+          break;
+      }
+      return {
+        type: "tool-result" as const,
+        toolCallId: call.toolCallId,
+        toolName: call.toolName,
+        output: { type: "text" as const, value },
+      };
+    }),
   });
 }

@@ -17,21 +17,39 @@ function getOrderStatus(orderNumber: string): string {
     return fakeOrders[orderNumber] ?? `no order found with number ${orderNumber}`;
 }
 
-// With `execute`, the SDK runs the function when the model asks for it.
-const getOrderStatusTool = tool({
-    description:
-        "Look up the current shipping/processing status of a customer order by its order number.",
-    inputSchema: z.object({
-        orderNumber: z.string().describe("The order number, e.g. '44821'."),
+// A second function, only to show where a second tool goes. Fixed answer.
+function checkStockLevel(partNumber: string): string {
+    return `${partNumber}: 120 in stock`;
+}
+
+// With `execute`, the SDK runs the matching function when the model asks
+// for a tool. Choosing it by name is the SDK's job here.
+const tools = {
+    getOrderStatus: tool({
+        description:
+            "Look up the current shipping/processing status of a customer order by its order number.",
+        inputSchema: z.object({
+            orderNumber: z.string().describe("The order number, e.g. '44821'."),
+        }),
+        execute: async ({ orderNumber }) => getOrderStatus(orderNumber),
     }),
-    execute: async ({ orderNumber }) => getOrderStatus(orderNumber),
-});
+    checkStockLevel: tool({
+        description: "Look up how many units of a part are in stock.",
+        inputSchema: z.object({
+            partNumber: z.string().describe("The part number, e.g. '7745-B'."),
+        }),
+        // additional line to otherwise same as `getOrderStatusTool` in part1-loop-by-hand.ts
+        execute: async ({ partNumber }) => checkStockLevel(partNumber),
+    }),
+};
 
 const anthropic = createAnthropic({ fetch: loggingFetch });
 
+// Almost the same as part1-loop-by-hand.ts
+
 const result = await generateText({
     model: anthropic("claude-sonnet-5"),
-    tools: { getOrderStatus: getOrderStatusTool },
+    tools,
     messages: [{ role: "user", content: "Where is my order 44821?" }],
     maxOutputTokens: 500,
     // At most five requests; without stopWhen the SDK sends only one.
