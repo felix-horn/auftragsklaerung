@@ -1,13 +1,14 @@
 # Auftragsklärung — Fachliche Regeln
 
-**Version:** v1.3
-**Stand:** 24.09.2026
+**Version:** v1.4
+**Stand:** 18.10.2026
 
 ## Zweck dieses Dokuments
 
 Dieses Dokument legt fest, wie eingehende Nachrichten in der Auftragsklärung
 fachlich zu bewerten sind: welcher Kategorie eine Nachricht angehört, was aus
-ihr festgehalten wird und wie dringend sie ist. Es beschreibt keine technische
+ihr festgehalten wird, wie dringend sie ist und was der Abgleich mit dem
+Auftragsbestand ergibt. Es beschreibt keine technische
 Umsetzung. Die Regeln gelten unabhängig davon, ob die Bewertung durch einen
 Mitarbeiter oder durch ein System erfolgt. Wird die Bewertung ganz oder
 teilweise automatisiert, werden deren Ergebnisse an diesen Regeln gemessen.
@@ -20,7 +21,7 @@ auf bestehende Bewertungen erhöhen die Nebenversion (v1.1), inhaltliche
 
 Die Regeln sind in der Reihenfolge angeordnet, in der eine Nachricht gelesen
 wird: Grundsätze, Einordnung, gewünschte Maßnahme, Auftrags- und Kundenbezug,
-Dringlichkeit.
+Dringlichkeit, Abgleich mit dem Auftragsbestand.
 
 > **Note for English-speaking readers.** This document is the specification
 > for an LLM-based email triage system for a German industrial parts supplier.
@@ -480,8 +481,8 @@ inzwischen abgelaufene Frist bleibt eine Frist.
 
 **Begründung:** Eine vom Kunden gesetzte Frist sagt, wann er eine Reaktion
 erwartet, und bestimmt die Reihenfolge der Bearbeitung. Liefertermine und
-Zusagen sind Sachverhalte zum Auftrag; sie werden im Auftragsbestand geprüft,
-nicht aus der Nachricht übernommen.
+Zusagen sind Sachverhalte zum Auftrag; sie werden im Auftragsbestand geprüft
+(R-17), nicht aus der Nachricht übernommen.
 
 **Seit:** v1.0
 
@@ -489,7 +490,8 @@ nicht aus der Nachricht übernommen.
 
 Jede Nachricht erhält eine von drei Dringlichkeitsstufen. Maßgeblich sind
 ausschließlich Eskalationsmerkmale (R-10, R-11) und Fristen (R-12). Es gilt
-die höchste zutreffende Stufe.
+die höchste zutreffende Stufe. Diese Dringlichkeit der Nachricht kann nach dem
+Abgleich mit dem Auftragsbestand steigen (R-17).
 
 **Hoch** — die Nachricht enthält mindestens eines dieser Merkmale:
 
@@ -533,6 +535,161 @@ sich an einem einzelnen, ausdrücklich genannten Merkmal nachprüfen.
 
 ---
 
+## Abgleich mit dem Auftragsbestand
+
+Nach der Bewertung wird die Nachricht mit dem Auftragsbestand abgeglichen.
+Der Auftragsbestand umfasst die Kunden, ihre Aufträge und die für jeden
+Kunden hinterlegten E-Mail-Adressen seiner Ansprechpartner.
+
+Der Abgleich ändert nichts an dem, was aus der Nachricht festgehalten wurde
+(R-01). Seine Ergebnisse werden getrennt davon geführt, damit erkennbar
+bleibt, was der Kunde geschrieben hat und was aus dem Auftragsbestand stammt.
+
+### R-14 — Wer anfragt, ergibt sich aus der Absenderadresse
+
+Eine Nachricht gilt als Anfrage eines Kunden, wenn ihre Absenderadresse im
+Auftragsbestand für einen Ansprechpartner dieses Kunden hinterlegt ist. Groß-
+und Kleinschreibung der Adresse spielen keine Rolle.
+
+Ist die Absenderadresse für keinen Kunden hinterlegt, wird „Absender ist
+keinem Kunden zugeordnet.“ festgehalten.
+
+Eine Kunden- oder Auftragsnummer in der Nachricht ordnet den Absender keinem
+Kunden zu, auch nicht zusätzlich zur Absenderadresse.
+
+Beispiele:
+
+- Eine Nachricht von m.brenner@brenner-hydraulik.example, einer beim Kunden
+  K-30117 hinterlegten Adresse, fragt nach Auftrag A-70214. — Anfrage von
+  K-30117, auch ohne Kundennummer in der Nachricht.
+- Dieselbe Nachricht kommt von brenner.m@freemail.example, einer nicht
+  hinterlegten Adresse, und nennt „Kundennummer K-30117“. — Absender ist
+  keinem Kunden zugeordnet.
+- Ein neuer Mitarbeiter des Kunden schreibt von seiner noch nicht
+  hinterlegten Adresse. — Absender ist keinem Kunden zugeordnet. Der
+  Bearbeiter klärt, wer schreibt, und lässt die Adresse hinterlegen.
+
+**Begründung:** Kundennummern stehen auf jeder Rechnung, jeder
+Auftragsbestätigung und jedem Lieferschein; wer eine Nummer nennt, weist sich
+damit nicht aus. Eine hinterlegte Absenderadresse kann nur nutzen, wer Zugang
+zu diesem Postfach hat. Eine fälschliche Ablehnung kostet den Bearbeiter eine
+Rückfrage, eine fälschliche Auskunft gibt die Geschäftsdaten eines Kunden an
+Dritte weiter.
+
+**Seit:** v1.4
+
+### R-15 — Abgefragt werden die festgehaltenen Auftragsnummern
+
+Ist der Absender einem Kunden zugeordnet (R-14), wird zu jeder festgehaltenen
+Auftragsnummer (R-08, R-09) der Auftrag im Auftragsbestand abgefragt. Die
+Kategorie der Nachricht spielt dafür keine Rolle. Ist der Absender keinem
+Kunden zugeordnet, wird nichts abgefragt.
+
+Eine Auftragsnummer, die ohne Präfix festgehalten wurde (R-09, Stufe 2), wird
+mit vorangestelltem „A-“ abgefragt. Festgehalten bleibt sie so, wie sie
+geschrieben steht (R-02).
+
+Abgefragt wird nur eine Nummer der Form „A-“ mit fünf Ziffern. Jede andere
+ist keine gültige Auftragsnummer (R-16).
+
+Beispiele:
+
+- Festgehalten „A-70214“. — Abgefragt wird A-70214.
+- „zu Bestellung 70214“, festgehalten „70214“. — Abgefragt wird A-70214;
+  festgehalten bleibt „70214“.
+- „zu Bestellung 7021“, festgehalten „7021“. — Keine gültige
+  Auftragsnummer; nichts wird abgefragt.
+- Festgehalten sind A-70214 und A-70388, weil nicht zu erkennen ist, welcher
+  Auftrag gemeint ist (R-08). — Beide werden abgefragt.
+
+**Begründung:** Eine Abfrage ändert nichts und gibt nur Aufträge des
+anfragenden Kunden preis (R-16). Eine überflüssige Abfrage schadet daher
+nicht; eine fehlende kostet den Bearbeiter die Suche. Das Präfix vergeben wir
+selbst, deshalb darf es für die Abfrage ergänzt werden; in der Bewertung
+bleibt der Wortlaut des Kunden erhalten.
+
+**Seit:** v1.4
+
+### R-16 — Auskunft nur zu Aufträgen des anfragenden Kunden
+
+Der Abgleich ergibt für jede abgefragte Nummer genau eines dieser Ergebnisse:
+
+| Lage | Ergebnis |
+|---|---|
+| Der Auftrag gehört dem Kunden, dem der Absender zugeordnet ist. | Status, zugesagter Liefertermin und Versanddatum des Auftrags |
+| Es gibt keinen Auftrag mit dieser Nummer, oder er gehört einem anderen Kunden. | „Kein Auftrag mit dieser Nummer für diesen Kunden.“ |
+| Die Nummer ist keine gültige Auftragsnummer (R-15). | „Keine gültige Auftragsnummer.“ |
+| Der Auftragsbestand ist nicht erreichbar. | „Auftragsbestand nicht erreichbar.“ |
+
+Wird die Auskunft verweigert, wird vom Auftrag nichts festgehalten, auch
+nicht, ob es ihn gibt. Ist der Auftragsbestand nicht erreichbar, ist nichts
+entschieden; der Abgleich wird wiederholt.
+
+Beispiele, der Absender ist K-30117 zugeordnet:
+
+- A-70214 ist ein Auftrag von K-30117. — Status, zugesagter Liefertermin und
+  Versanddatum.
+- A-70555 ist ein Auftrag eines anderen Kunden. — „Kein Auftrag mit dieser
+  Nummer für diesen Kunden.“
+- A-79999 gibt es nicht. — Dasselbe Ergebnis.
+- Festgehalten „7021“. — „Keine gültige Auftragsnummer.“
+
+**Begründung:** Unterschiedliche Ergebnisse für „gibt es nicht“ und „gehört
+einem anderen Kunden“ verrieten, welche Auftragsnummern vergeben sind: wer
+nacheinander nach A-70200 bis A-70220 fragt, erführe es Nummer für Nummer.
+Die übrigen Ergebnisse verraten nichts über fremde Aufträge und führen den
+Bearbeiter zu unterschiedlichen Schritten: klären, wer schreibt (R-14); nach
+der richtigen Nummer fragen; nach einer Auftragsnummer fragen. Ein nicht
+erreichbarer Auftragsbestand ist keine Ablehnung; als Ablehnung festgehalten,
+sähe eine Störung aus wie eine falsche Nummer.
+
+**Seit:** v1.4
+
+### R-17 — Dringlichkeit nach dem Abgleich
+
+Die Dringlichkeit der Nachricht (R-13) steigt nach dem Abgleich auf
+mindestens mittel, wenn ein Auftrag, zu dem der Abgleich Angaben ergeben hat
+(R-16),
+
+- einen zugesagten Liefertermin hat, der am Tag des Abgleichs verstrichen
+  ist, ohne dass der Auftrag geliefert wurde (überschrittene Zusage), oder
+- noch nicht versandt ist und die Nachricht der Kategorie Stornierung
+  angehört (Stornierung vor dem Versand).
+
+Hoch bleibt hoch. Merkmale addieren sich nicht: treffen beide zu, ergibt das
+mittel, nicht hoch. Die Dringlichkeit der Nachricht nach R-13 bleibt daneben
+bestehen; sie beschreibt die Nachricht allein.
+
+Anders als bei Fristen (R-12) ist der Tag des Abgleichs maßgeblich, nicht der
+Zeitpunkt des Schreibens: es geht um den Stand des Auftrags, nicht um das,
+was der Kunde verlangt hat.
+
+Beispiele:
+
+- Anfrage zum Stand von A-70214. Zugesagt war die Lieferung bis zum 06.06.,
+  der Abgleich findet am 10.06. statt, geliefert wurde nicht. — Mindestens
+  mittel.
+- Stornierung von A-70214, der Auftrag ist noch in Bearbeitung. — Mindestens
+  mittel.
+- Dieselbe Stornierung mit „bitte bestätigen Sie bis Freitag“, nach R-13
+  bereits mittel. — Bleibt mittel.
+- Stornierung eines bereits versandten Auftrags. — Keine Anhebung.
+- Produktionsstillstand (hoch) und überschrittene Zusage. — Bleibt hoch.
+- Auskunft verweigert oder Auftragsbestand nicht erreichbar. — Keine
+  Anhebung, denn zum Auftrag liegen keine Angaben vor.
+
+**Begründung:** Die mittlere Stufe erfasst nach R-13 Nachrichten, bei denen
+der Kunde eine Reaktion zu einem bestimmten Zeitpunkt erwartet oder bereits
+vergeblich gewartet hat. Bei einer überschrittenen Zusage hat er vergeblich
+gewartet; das steht im Auftragsbestand zuverlässiger als in der Nachricht.
+Eine Stornierung vor dem Versand verlangt eine Reaktion vor einem bestimmten
+Zeitpunkt, dem Versand. Hoch bleibt den Lagen vorbehalten, die R-13 dafür
+nennt.
+
+**Seit:** v1.4
+
+---
+
 ## Bekannte Lücken
 
 Bewusst nicht geregelt, jeweils mit Begründung.
@@ -546,16 +703,22 @@ Bewusst nicht geregelt, jeweils mit Begründung.
   Erweiterung wird erst vorgenommen, wenn ihre Auswirkung auf die
   Bewertungsgüte messbar ist.
 
-- **Überschrittene Zusagen.** Beruft sich ein Kunde auf einen von uns
-  zugesagten und inzwischen überschrittenen Termin, ist die Nachricht
-  fachlich dringender. Das wird nicht aus dem Text abgeleitet, weil der
-  zugesagte Termin im Auftragsbestand steht und dort zuverlässiger geprüft
-  werden kann. Die Ableitung gehört in die Auswertung der Auftragsdaten.
+- **Gefälschte Absenderadressen.** Eine Absenderadresse lässt sich fälschen.
+  R-14 vertraut einer hinterlegten Adresse; ob eine Nachricht tatsächlich aus
+  diesem Postfach stammt, prüft der Mailserver, nicht dieses Dokument. Die
+  Antwort geht an die Absenderadresse, also in der Regel an das echte
+  Postfach.
 
-- **Stornierungen vor dem Versand.** Eine Stornierung ist fachlich
-  dringender, solange die Ware noch nicht versandt ist. Nach R-13 beeinflusst
-  die Kategorie die Dringlichkeit nicht. Der Versandstatus steht im
-  Auftragsbestand und wird dort geprüft, nicht aus der Nachricht abgeleitet.
+- **Nachrichten ohne gültige Auftragsnummer.** Fragt ein Kunde nach einem
+  Auftrag, ohne eine gültige Auftragsnummer zu nennen, ergibt der Abgleich
+  keine Angaben; der Bearbeiter sucht den Auftrag selbst. Eine Abfrage der
+  Aufträge des Kunden ist zurückgestellt, bis eine Antwort sie braucht.
+
+- **Rechnungen und Dokumente.** Rechnungsfragen und
+  Dokumentenanforderungen werden nicht mit Rechnungen oder Unterlagen im
+  Auftragsbestand abgeglichen. Dafür müsste die Bewertung Rechnungsnummern
+  und die angeforderte Unterlage festhalten. Zurückgestellt, bis eine Antwort
+  diese Angaben braucht.
 
 - **Nähe einer Frist.** Eine Frist hebt die Dringlichkeit auf mittel,
   unabhängig davon, ob sie morgen oder in drei Monaten abläuft. Eine
@@ -591,3 +754,4 @@ Bewusst nicht geregelt, jeweils mit Begründung.
 | v1.1 | 21.09.2026 | Bekannte Lücken ergänzt: Stornierungen vor dem Versand, automatische Antworten, Nachrichten ohne Anliegen. Keine Bewertung betroffen. |
 | v1.2 | 22.09.2026 | Kategorie Neuanfrage in Kaufanfrage umbenannt; der Name legte fälschlich einen Neukunden nahe. Begriff Angebotsanfrage ergänzt. Keine Bewertung betroffen. |
 | v1.3 | 24.09.2026 | Dokumentenanforderung gegen Unterlagen abgegrenzt, die erst bei der Bearbeitung entstehen (Rücksendeetikett). Die Frage war beim Labeln offen; kein bereits vergebenes Label ändert sich. |
+| v1.4 | 18.10.2026 | Abschnitt Abgleich mit dem Auftragsbestand ergänzt: Zuordnung des Absenders (R-14), abgefragte Auftragsnummern (R-15), Auskunft nur zu Aufträgen des anfragenden Kunden (R-16), Dringlichkeit nach dem Abgleich (R-17). Überschrittene Zusagen und Stornierungen vor dem Versand aus den Bekannten Lücken in R-17 übernommen; neu in den Bekannten Lücken: gefälschte Absenderadressen, Nachrichten ohne gültige Auftragsnummer, Rechnungen und Dokumente. R-12 und R-13 verweisen auf R-17. Keine Bewertung betroffen. |
