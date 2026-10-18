@@ -1,9 +1,11 @@
+
 # CLAUDE.md
 
 ## What this is
 
 German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
-(later) ERP tools, retrieval, evals, approval queue. Built module by module.
+ERP stage (Module 4) → (later) retrieval, reply drafts, approval queue; evals
+throughout. Built module by module.
 
 ## Stack facts — verified, do not re-derive
 
@@ -140,6 +142,11 @@ fake fetch (no API), or in a real run of a 04_module/ script.
   source indentation inside a template literal is sent over the wire.
 - Urgency is derived in code (`deriveUrgency` in src/urgency.ts), never asked of the
   model.
+- The extraction records facts from the email. A decision that follows from
+  recorded facts by a fixed rule is made in code, never asked of the model:
+  urgency, and which ERP lookups run (see ERP stage). If a decision needs
+  something the extraction doesn't record, add a fact field, not a field that
+  names the action.
 - Golden eval labels derive from docs/POLICY.md (Module 3), never from the system
   prompt. Rewording a prompt must not be able to move a label.
 - After changing DEFAULT_SYSTEM, schema.ts, or any generateText parameter: run
@@ -357,7 +364,8 @@ tested in the .test.ts file next to it.
   run instead of combining two evals. The same holds for a repeated eval.
 - 22 cases: one miss moves a field's accuracy (and the case pass rate) by about
   4.5 points. Quote every number with that.
-- Rule coverage (POLICY v1.3 → check → cases that exercise it):
+- Rule coverage (POLICY v1.4 → check → cases that exercise it; R-14 to R-17
+  govern the ERP stage and no golden-set check covers them, see ERP stage):
   | Rule | Checked by | Cases |
   |---|---|---|
   | R-01 | partly: invented values in requestedAction presence, number lists, escalationSignals | E-07, E-13, E-14 |
@@ -534,10 +542,65 @@ below is from one run: what can happen, not how often.
     extraction, and `output` was parsed from it. customerNumbers stayed `[]`
     (label `[]`): the ERP's number did not leak in this run. 2,461 + 2,604
     input, 91 + 98 output tokens, about 1.2 US cents.
-- Not decided in 4.1: where the ERP lookup sits. 4.2 chooses between routing
-  inside the extraction (`nextAction`), the extraction after a lookup in one
-  SDK loop, and a separate step after the extraction (code only, or a tool loop
-  of its own). Whatever the extraction sees, R-01 still applies to it.
+- Where the ERP lookup sits was decided in 4.2: see ERP stage.
+
+## ERP stage (Module 4.2)
+
+Business rules: docs/POLICY.md v1.4, R-14 to R-17. Decided in 4.2; built from
+4.3 on.
+
+- Pipeline: email text and sender address in. The text goes to the extraction
+  (one model request, unchanged); the sender address goes to the ERP stage.
+  Then urgency: R-13 from the extraction, raised by R-17 from order data.
+  Later: reply drafts (6b), approval queue (8).
+- The ERP stage is code only. Rules in code pick its lookups from what the
+  extraction records and from the sender address. No model calls a tool, and
+  no ERP answer reaches the extraction, so R-01 holds by construction. In
+  Anthropic's terms a workflow (predefined code paths), shaped as prompt
+  chaining with a code step between model requests.
+- Two ERP functions in Module 4 (mock ERP, 4.3):
+  - findCustomerBySender: every email (R-14). The match ignores case; a
+    customer number in the text identifies nobody.
+  - getOrderStatus: every recorded order number when the sender is assigned
+    to a customer, whatever the intent (R-15). A number recorded without
+    prefix is looked up with "A-"; only "A-" plus five digits is looked up.
+    Returns status, promised delivery date, shipping date and the owning
+    customer; the result is one of the R-16 outcomes. Customer numbers are
+    never looked up, so no "K-" is added anywhere.
+  - The permission check and the R-16 texts are enforced in code. A refused
+    lookup records only its outcome text, nothing about the order.
+- A lookup is built in the module that builds the step consuming its result.
+  getCustomerHistory, invoice and document lookups wait for 6b (Deferred design
+  questions); checkStockLevel has no consumer (POLICY.md Kontext: the Vertrieb
+  makes offers).
+- When the model should choose the action instead (a `nextAction` field or
+  tool calling): only when no recorded field decides the choice and calling
+  every candidate is not acceptable (functions that change data, or a large
+  tool set). Not the case in Module 4.
+- Rejected in 4.2 (evidence: one run each in 4.1, Ways to use a tool):
+  - Routing inside the extraction (`nextAction`, Felix's 4.1 design). It
+    restates what `orderNumbers` decides and can contradict it; a field with
+    one order forces a guess on E-02 (R-08: record both); its golden labels
+    would need a POLICY.md rule that code can apply directly.
+  - Extraction after a lookup in one SDK loop. The extraction is written with
+    ERP data in context (R-01; no leak in the one run, rate unmeasured), and an
+    ERP error reaches the model mid-loop.
+  - A separate step with its own tool loop. A second model answers what the
+    extraction already answered.
+  - Not used as reasons (Felix, 4.1): API cost, eval baseline stability.
+- Sources read for the decision: Anthropic, "Building effective agents"
+  (19.12.2024): workflows for well-defined tasks, agents where the steps can't
+  be fixed in advance. AI SDK docs, node_modules/ai/docs/03-agents/
+  01-overview.mdx and 03-workflows.mdx (routing example: the model classifies,
+  code picks the next step from a table).
+- Test data. The sender address is email metadata, never extracted, and not
+  part of a golden case. End-to-end cases get a file of their own: golden email
+  ID + invented sender + expected outcome under R-14 to R-17, against invented
+  mock ERP data; never derived from labels. One text serves several cases
+  (E-06 from the order's owner, from another customer's contact, from an
+  unknown address). Golden-set gap: no email has an order number without
+  prefix that the customer calls an order (R-09 Stufe 2). Candidate E-23,
+  added with the end-to-end eval; the gate then needs a new ten-run baseline.
 
 ## Open experiments
 
@@ -618,8 +681,14 @@ The others wait for the larger golden set (Module 6 onward).
 - Golden set size: 22 cases in Module 3. Expand when statistical resolution
   is needed (Module 6 onward), not before. 3.7: calibration and any confidence
   threshold need more emails with wrong intents; only four exist.
-- Unprefixed identifiers recorded as written (R-09 step 2) get normalised at
-  the ERP lookup. Module 4.
+- Lookups for reply drafts (6b), each with the extraction field it needs, a
+  POLICY.md rule for recording it, labels for the existing emails and a
+  ten-run eval: getCustomerHistory (order questions and complaints without a
+  valid order number, e.g. E-14); an invoice lookup (needs an invoice-number
+  field: E-04 and E-22 name only an invoice, E-12 and E-18 also an order); a
+  document lookup (needs a field for the requested document, e.g. E-15). Build
+  one only if it teaches something the Module 4 lookups don't. POLICY.md
+  Bekannte Lücken (v1.4) records the business side.
 - Reply drafting is Module 6b (added to the roadmap in 3.1 as Module 5b). The
   LLM-as-judge eval for drafts and the reply-language decision go with it.
 - Does `requestedAction` earn its place in the approval queue UI? Module 8.
