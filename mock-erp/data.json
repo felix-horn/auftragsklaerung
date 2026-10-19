@@ -1,0 +1,31 @@
+{
+  "customers": [
+    {
+      "customerNumber": "K-51320",
+      "contactEmails": [
+        "einkauf@kessler-fluidtechnik.example",
+        "l.vogt@kessler-fluidtechnik.example"
+      ]
+    },
+    {
+      "customerNumber": "K-58047",
+      "contactEmails": ["bestellung@wendt-maschinenbau.example"]
+    }
+  ],
+  "orders": [
+    {
+      "orderNumber": "A-44821",
+      "customerNumber": "K-51320",
+      "status": "in_progress",
+      "promisedDeliveryDate": "2026-11-06",
+      "shippedOn": null
+    },
+    {
+      "orderNumber": "A-44100",
+      "customerNumber": "K-51320",
+      "status": "delivered",
+      "promisedDeliveryDate": "2026-10-09",
+      "shippedOn": "2026-10-07"
+    }
+  ]
+}
