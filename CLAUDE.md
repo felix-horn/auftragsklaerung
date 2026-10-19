@@ -175,10 +175,11 @@ fake fetch (no API), or in a real run of a 04_module/ script.
   loaded by promptfoo: they read exported evals.
 - Pipeline functions return data and print nothing. Entry points decide what to
   show: run.ts prints, the promptfoo provider reports to promptfoo.
-- 04_module/ holds Module 4.1's teaching scripts and experiments. They call the
-  API directly, with no fake switch (Felix's decision, 4.1: easier to read is
-  worth the occasional cent), and print every request and response body through
-  04_module/logging-fetch.ts. Nothing in src/ imports them; tsc checks them.
+- 04_module/ holds Module 4's teaching scripts and experiments. The 4.1 scripts
+  call the API directly, with no fake switch (Felix's decision, 4.1: easier to
+  read is worth the occasional cent), and print every request and response body
+  through 04_module/logging-fetch.ts. minimal-http-server.ts (4.3) is node:http
+  on its own: no API, no ERP. Nothing in src/ imports them; tsc checks them.
 
 ## Observed numbers (20-email set, module-2 tag)
 
@@ -271,9 +272,12 @@ fake fetch (no API), or in a real run of a 04_module/ script.
   results, Display → Failures, details per case (Evaluation and Metadata tabs)
 - `PROMPTFOO_DISABLE_TELEMETRY=1 npx promptfoo export eval <eval id> -o <file>` —
   a stored run as JSON; no API call
-- `npx tsx 04_module/<file>.ts` — a Module 4.1 script (see Ways to use a tool);
-  1–3 API calls, under 2 US cents. part4-tool-choice.ts takes
-  `auto`, `required`, `none` or `checkStockLevel`.
+- `npx tsx 04_module/<file>.ts` — a Module 4.1 script (part1 to part4,
+  experiment-*; see Ways to use a tool); 1–3 API calls, under 2 US cents.
+  part4-tool-choice.ts takes `auto`, `required`, `none` or `checkStockLevel`.
+- `npx tsx 04_module/minimal-http-server.ts` — Module 4.3's node:http example: a
+  server on 127.0.0.1:4000 until Ctrl+C; no API call. Try
+  `curl -i http://127.0.0.1:4000/hello` from a second terminal.
 
 ## Eval comparison (Module 3.4)
 
