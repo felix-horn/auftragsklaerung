@@ -169,6 +169,9 @@ fake fetch (no API), or in a real run of a 04_module/ script.
   compares model output with golden labels lives in src/golden/ (compare.ts,
   deadline.ts) and is never called by the pipeline. evals/assertions/fields.ts
   only applies those helpers per field for promptfoo.
+- mock-erp/ stands in for an outside system (Module 4.3): neither pipeline nor
+  eval code. It imports the contract from src/erp-contract.ts; nothing in src/
+  imports mock-erp/.
 - Everything promptfoo loads lives in evals/ (config, providers/, assertions/,
   golden-tests.ts); nothing in src/ imports promptfoo. evals/report.ts,
   evals/gate.ts, evals/gate-cli.ts and evals/baseline/ live there too but are not
@@ -278,6 +281,9 @@ fake fetch (no API), or in a real run of a 04_module/ script.
 - `npx tsx 04_module/minimal-http-server.ts` — Module 4.3's node:http example: a
   server on 127.0.0.1:4000 until Ctrl+C; no API call. Try
   `curl -i http://127.0.0.1:4000/hello` from a second terminal.
+- `npm run erp` — the mock ERP on 127.0.0.1:4100 until Ctrl+C (see Mock ERP
+  (Module 4.3)); no API call. Try
+  `curl -s -w "\n%{http_code}\n" http://127.0.0.1:4100/orders/A-44821`.
 
 ## Eval comparison (Module 3.4)
 
@@ -367,7 +373,7 @@ tested in the .test.ts file next to it.
   run instead of combining two evals. The same holds for a repeated eval.
 - 22 cases: one miss moves a field's accuracy (and the case pass rate) by about
   4.5 points. Quote every number with that.
-- Rule coverage (POLICY v1.4 → check → cases that exercise it; R-14 to R-17
+- Rule coverage (POLICY v1.5 → check → cases that exercise it; R-14 to R-17
   govern the ERP stage and no golden-set check covers them, see ERP stage):
   | Rule | Checked by | Cases |
   |---|---|---|
@@ -549,8 +555,8 @@ below is from one run: what can happen, not how often.
 
 ## ERP stage (Module 4.2)
 
-Business rules: docs/POLICY.md v1.4, R-14 to R-17. Decided in 4.2; built from
-4.3 on.
+Business rules: docs/POLICY.md R-14 to R-17 (since v1.4). Decided in 4.2;
+built from 4.3 on.
 
 - Pipeline: email text and sender address in. The text goes to the extraction
   (one model request, unchanged); the sender address goes to the ERP stage.
@@ -574,8 +580,8 @@ Business rules: docs/POLICY.md v1.4, R-14 to R-17. Decided in 4.2; built from
     lookup records only its outcome text, nothing about the order.
 - Mock ERP (built in 4.3): a plain `node:http` server in this repo, started as
   its own process, serving one JSON file of invented customers (with contact
-  addresses) and orders. The seed deliberately covers the R-14 to R-17 cases.
-  Zod schemas in src/ are the contract: the mock validates its data with them
+  addresses) and orders. The seed holds what the end-to-end cases need (see
+  Mock ERP (Module 4.3)). Zod schemas in src/ are the contract: the mock validates its data with them
   on load, our client validates every response with them. Base URL from
   `ERP_BASE_URL` in .env. Errors: 404 for an unknown order or address, and
   "not reachable"; both map to R-16 outcomes. "Today" for R-17 is passed in,
@@ -620,6 +626,77 @@ Business rules: docs/POLICY.md v1.4, R-14 to R-17. Decided in 4.2; built from
   unknown address). Golden-set gap: no email has an order number without
   prefix that the customer calls an order (R-09 Stufe 2). Candidate E-23,
   added with the end-to-end eval; the gate then needs a new ten-run baseline.
+
+## Mock ERP (Module 4.3)
+
+Stands in for the company's ERP. Built in 4.3; our ERP client calls it from
+4.5 on. Every fact below was checked in a scratch copy (Node 24.21.0, zod
+4.5.4) or on Felix's Mac.
+
+- Files: src/erp-contract.ts (the contract: Zod schemas for a customer, an
+  order and the data file; imported by the mock and, from 4.5, by the client;
+  10 tests in src/erp-contract.test.ts with invented records);
+  mock-erp/data.json (the seed); mock-erp/data.test.ts (the seed against the
+  contract, so `npm test` and CI catch a broken seed without starting the
+  server); mock-erp/server.ts (`createMockErp(data)`, routes only, so tests can
+  start it with data of their own); mock-erp/main.ts (`npm run erp`: checks
+  data.json, refuses to start on a violation with exit code 1, listens on
+  127.0.0.1:4100).
+- Endpoints, read-only:
+  - `GET /customers?email=<address>` → 200 the customer; 404 `no customer with
+    this contact address`; 400 `query parameter email is required`.
+  - `GET /orders/<orderNumber>` → 200 the order; 404 `no order with this
+    number`.
+  - Anything else → 404 `no such endpoint`. The different 404 texts let the
+    client tell a missing record from a wrong base URL; whether it reads them
+    is decided in 4.5.
+  One record or 404, not a list: the contract allows at most one customer per
+  address.
+- No business rule in the mock: it answers like an ERP to our service
+  account. The address match is exact (lowercasing the sender is R-14, our
+  code), "A-" is never added (R-15, our code), and every order goes to every
+  caller (R-16, our code). All from 4.4 on.
+- Contract, Felix's decisions (4.3, by committing the recommendation): three
+  order statuses, `in_progress` / `shipped` / `delivered` (POLICY.md's
+  in Bearbeitung / versandt / geliefert; storniert and teilgeliefert have no
+  rule that uses them); `promisedDeliveryDate` may be null (R-17: "einen
+  zugesagten Liefertermin hat"); an address belongs to at most one customer
+  (POLICY.md v1.5, Bekannte Lücken).
+- Contract, method: one order shape per status (discriminated union: in
+  progress has `shippedOn: null`, shipped and delivered have a date); dates
+  `YYYY-MM-DD`; addresses in lower case; numbers in R-09's format; no
+  customer number, address or order number twice; a field only where a rule
+  uses it (no names, no order items).
+- Seed: K-51320 (einkauf@ and l.vogt@kessler-fluidtechnik.example) owns
+  A-44821 (in progress, promised 2026-11-06) and A-44100 (delivered, shipped
+  2026-10-07). K-58047 (bestellung@wendt-maschinenbau.example) has no
+  orders. Reasons: E-06 names both orders (A-44821 asked about and not yet
+  shipped; A-44100 delivered, background under R-08, so the label leaves it
+  out). Done-when: E-06 from a Kessler address → A-44821's status; from
+  Wendt's → „Kein Auftrag mit dieser Nummer für diesen Kunden.“ The promise
+  date serves R-17 both ways, depending on the lookup date passed in (a
+  lookup on 2026-11-05: not overdue; on 2026-11-09: overdue). An unknown
+  sender is by definition not in the file.
+- What the seed covers: the client (4.5) and the end-to-end cases (4.7,
+  4.8). The R-14 to R-17 situations are tested with in-memory fakes in vitest
+  (4.4, 4.6). 4.8 adds the orders of the golden emails its cases use,
+  together with those cases.
+- Mock data and the golden set: a record must not change when a golden
+  label changes. Order numbers from an email's text are allowed (the company's
+  orders exist whatever we label); records derived from labels are not. No
+  sender address is built from a signature, and POLICY.md's example customers
+  are not reused. Names and numbers were checked against golden texts,
+  labels, POLICY.md and tests.
+- Zod 4.5.4: `z.iso.date()` rejects "23.10.2026" and "2026-02-30";
+  `z.email()` accepts ASCII only, so `.lowercase()` (no A–Z) covers every
+  address it accepts; a missing key fails `.nullable()`; parsed records come
+  back in the schema's field order (`promisedDeliveryDate` before `status`).
+- node:http (Node 24.21.0): `res.writeHead()` then `res.end(body)` sent
+  `Transfer-Encoding: chunked`; `res.statusCode` + `res.setHeader()` +
+  `res.end(body)` sent `Content-Length`. A second `listen` on a taken port
+  throws EADDRINUSE (errno -48 on macOS, -98 on Linux). curl against a closed
+  port exits with code 7 and prints no status. In zsh, a URL with `?` must be
+  quoted (plain zsh: "no matches found").
 
 ## Open experiments
 
@@ -707,7 +784,7 @@ The others wait for the larger golden set (Module 6 onward).
   field: E-04 and E-22 name only an invoice, E-12 and E-18 also an order); a
   document lookup (needs a field for the requested document, e.g. E-15). Build
   one only if it teaches something the Module 4 lookups don't. POLICY.md
-  Bekannte Lücken (v1.4) records the business side.
+  Bekannte Lücken (since v1.4) records the business side.
 - Reply drafting is Module 6b (added to the roadmap in 3.1 as Module 5b). The
   LLM-as-judge eval for drafts and the reply-language decision go with it.
 - Does `requestedAction` earn its place in the approval queue UI? Module 8.
