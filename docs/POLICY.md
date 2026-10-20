@@ -1,7 +1,7 @@
 # Auftragsklärung — Fachliche Regeln
 
-**Version:** v1.4
-**Stand:** 18.10.2026
+**Version:** v1.5
+**Stand:** 20.10.2026
 
 ## Zweck dieses Dokuments
 
@@ -709,6 +709,14 @@ Bewusst nicht geregelt, jeweils mit Begründung.
   Antwort geht an die Absenderadresse, also in der Regel an das echte
   Postfach.
 
+- **Mehrfach hinterlegte Absenderadressen.** R-14 setzt voraus, dass eine
+  Absenderadresse bei höchstens einem Kunden hinterlegt ist. Teilen sich
+  mehrere Kunden eine Adresse — etwa zwei Gesellschaften einer
+  Unternehmensgruppe mit gemeinsamem Einkauf —, ergibt sich aus der Adresse
+  nicht, welcher Kunde anfragt. Wie solche Nachrichten zugeordnet werden, ist
+  nicht geregelt. Zurückgestellt, solange im Auftragsbestand jede Adresse
+  höchstens einem Kunden zugeordnet ist.
+
 - **Nachrichten ohne gültige Auftragsnummer.** Fragt ein Kunde nach einem
   Auftrag, ohne eine gültige Auftragsnummer zu nennen, ergibt der Abgleich
   keine Angaben; der Bearbeiter sucht den Auftrag selbst. Eine Abfrage der
@@ -755,3 +763,4 @@ Bewusst nicht geregelt, jeweils mit Begründung.
 | v1.2 | 22.09.2026 | Kategorie Neuanfrage in Kaufanfrage umbenannt; der Name legte fälschlich einen Neukunden nahe. Begriff Angebotsanfrage ergänzt. Keine Bewertung betroffen. |
 | v1.3 | 24.09.2026 | Dokumentenanforderung gegen Unterlagen abgegrenzt, die erst bei der Bearbeitung entstehen (Rücksendeetikett). Die Frage war beim Labeln offen; kein bereits vergebenes Label ändert sich. |
 | v1.4 | 18.10.2026 | Abschnitt Abgleich mit dem Auftragsbestand ergänzt: Zuordnung des Absenders (R-14), abgefragte Auftragsnummern (R-15), Auskunft nur zu Aufträgen des anfragenden Kunden (R-16), Dringlichkeit nach dem Abgleich (R-17). Überschrittene Zusagen und Stornierungen vor dem Versand aus den Bekannten Lücken in R-17 übernommen; neu in den Bekannten Lücken: gefälschte Absenderadressen, Nachrichten ohne gültige Auftragsnummer, Rechnungen und Dokumente. R-12 und R-13 verweisen auf R-17. Keine Bewertung betroffen. |
+| v1.5 | 20.10.2026 | Bekannte Lücken ergänzt: mehrfach hinterlegte Absenderadressen (R-14). Keine Bewertung betroffen. |

@@ -1,7 +1,7 @@
 # Auftragsklärung — Leitfaden für das Labelling
 
-**Bezieht sich auf:** `docs/POLICY.md` v1.4
-**Stand:** 18.10.2026
+**Bezieht sich auf:** `docs/POLICY.md` v1.5
+**Stand:** 20.10.2026
 
 > **Note for English-speaking readers.** This is the annotation guide for the
 > golden set used to evaluate the Auftragsklärung system. `docs/POLICY.md`
