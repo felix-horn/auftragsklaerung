@@ -571,8 +571,9 @@ built from 4.3 on.
   - findCustomerBySender: every email (R-14). The match ignores case; a
     customer number in the text identifies nobody.
   - getOrderStatus: every recorded order number when the sender is assigned
-    to a customer, whatever the intent (R-15). A number recorded without
-    prefix is looked up with "A-"; only "A-" plus five digits is looked up.
+    to a customer, whatever the intent (R-15). Five digits with "A-", "a-",
+    "A" or "a" in front, or with nothing in front, are looked up as "A-" plus
+    the five digits (POLICY.md v1.6); nothing else is looked up.
     Returns status, promised delivery date, shipping date and the owning
     customer; the result is one of the R-16 outcomes. Customer numbers are
     never looked up, so no "K-" is added anywhere.
