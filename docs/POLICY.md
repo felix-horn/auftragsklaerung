@@ -1,7 +1,7 @@
 # Auftragsklärung — Fachliche Regeln
 
-**Version:** v1.5
-**Stand:** 20.10.2026
+**Version:** v1.6
+**Stand:** 21.10.2026
 
 ## Zweck dieses Dokuments
 
@@ -586,17 +586,23 @@ Kategorie der Nachricht spielt dafür keine Rolle. Ist der Absender keinem
 Kunden zugeordnet, wird nichts abgefragt.
 
 Eine Auftragsnummer, die ohne Präfix festgehalten wurde (R-09, Stufe 2), wird
-mit vorangestelltem „A-“ abgefragt. Festgehalten bleibt sie so, wie sie
-geschrieben steht (R-02).
+mit vorangestelltem „A-“ abgefragt. Ist das Präfix klein geschrieben oder
+fehlt sein Bindestrich, wird die Nummer ebenso als „A-“ mit fünf Ziffern
+abgefragt. Festgehalten bleibt die Nummer jeweils so, wie sie geschrieben
+steht (R-02).
 
-Abgefragt wird nur eine Nummer der Form „A-“ mit fünf Ziffern. Jede andere
-ist keine gültige Auftragsnummer (R-16).
+Abgefragt wird nur eine Nummer, die so die Form „A-“ mit fünf Ziffern
+erhält. Jede andere ist keine gültige Auftragsnummer (R-16).
 
 Beispiele:
 
 - Festgehalten „A-70214“. — Abgefragt wird A-70214.
 - „zu Bestellung 70214“, festgehalten „70214“. — Abgefragt wird A-70214;
   festgehalten bleibt „70214“.
+- Festgehalten „a-70214“, „A70214“ oder „a70214“. — Abgefragt wird jeweils
+  A-70214; festgehalten bleibt die Schreibweise des Kunden.
+- Festgehalten „A 70214“. — Keine gültige Auftragsnummer; nichts wird
+  abgefragt.
 - „zu Bestellung 7021“, festgehalten „7021“. — Keine gültige
   Auftragsnummer; nichts wird abgefragt.
 - Festgehalten sind A-70214 und A-70388, weil nicht zu erkennen ist, welcher
@@ -605,10 +611,12 @@ Beispiele:
 **Begründung:** Eine Abfrage ändert nichts und gibt nur Aufträge des
 anfragenden Kunden preis (R-16). Eine überflüssige Abfrage schadet daher
 nicht; eine fehlende kostet den Bearbeiter die Suche. Das Präfix vergeben wir
-selbst, deshalb darf es für die Abfrage ergänzt werden; in der Bewertung
-bleibt der Wortlaut des Kunden erhalten.
+selbst, deshalb darf es für die Abfrage ergänzt und in seine Schreibweise
+gebracht werden; ein klein geschriebenes Präfix oder ein fehlender
+Bindestrich lässt keinen Zweifel, welcher Auftrag gemeint ist. In der
+Bewertung bleibt der Wortlaut des Kunden erhalten.
 
-**Seit:** v1.4
+**Seit:** v1.4, geändert in v1.6
 
 ### R-16 — Auskunft nur zu Aufträgen des anfragenden Kunden
 
@@ -764,3 +772,4 @@ Bewusst nicht geregelt, jeweils mit Begründung.
 | v1.3 | 24.09.2026 | Dokumentenanforderung gegen Unterlagen abgegrenzt, die erst bei der Bearbeitung entstehen (Rücksendeetikett). Die Frage war beim Labeln offen; kein bereits vergebenes Label ändert sich. |
 | v1.4 | 18.10.2026 | Abschnitt Abgleich mit dem Auftragsbestand ergänzt: Zuordnung des Absenders (R-14), abgefragte Auftragsnummern (R-15), Auskunft nur zu Aufträgen des anfragenden Kunden (R-16), Dringlichkeit nach dem Abgleich (R-17). Überschrittene Zusagen und Stornierungen vor dem Versand aus den Bekannten Lücken in R-17 übernommen; neu in den Bekannten Lücken: gefälschte Absenderadressen, Nachrichten ohne gültige Auftragsnummer, Rechnungen und Dokumente. R-12 und R-13 verweisen auf R-17. Keine Bewertung betroffen. |
 | v1.5 | 20.10.2026 | Bekannte Lücken ergänzt: mehrfach hinterlegte Absenderadressen (R-14). Keine Bewertung betroffen. |
+| v1.6 | 21.10.2026 | R-15: Eine Auftragsnummer mit klein geschriebenem Präfix oder ohne Bindestrich wird als „A-“ mit fünf Ziffern abgefragt. Keine Bewertung betroffen. |
