@@ -1,4 +1,4 @@
-import type { Order } from "./erp-contract.js";
+import type { Customer, Order } from "./erp-contract.js";
 
 // Rules of the ERP stage (POLICY.md R-14 to R-16; CLAUDE.md, ERP stage).
 // They belong to our code, not to the ERP: the ERP compares addresses
@@ -13,7 +13,7 @@ import type { Order } from "./erp-contract.js";
  * Expects the bare address ("m.weber@alpha.example"), not a header with a
  * display name ("Max Weber <m.weber@alpha.example>").
  */
-export function senderAddressForLookup(senderAddress: string): string {
+export function normaliseSenderAddress(senderAddress: string): string {
   return senderAddress.toLowerCase();
 }
 
@@ -32,7 +32,7 @@ const LOOKUP_FORM = /^([Aa]-?)?\d{5}$/;
  * the two apart needs the words around the number, which only the model
  * sees.
  */
-export function orderNumberForLookup(recorded: string): string | null {
+export function normaliseOrderNumber(recorded: string): string | null {
   if (!LOOKUP_FORM.test(recorded)) return null;
   return `A-${recorded.slice(-5)}`;
 }
@@ -48,7 +48,7 @@ export type ErpAnswer<T> =
 
 // R-16: per looked-up number exactly one outcome. "refused" stands for
 // „Kein Auftrag mit dieser Nummer für diesen Kunden.“, "invalid" for
-// „Keine gültige Auftragsnummer.“ (orderNumberForLookup returned null),
+// „Keine gültige Auftragsnummer.“ (normaliseOrderNumber returned null),
 // "unreachable" for „Auftragsbestand nicht erreichbar.“. Only "order"
 // carries order data; the other outcomes carry nothing about the order.
 export type OrderOutcome =
@@ -62,7 +62,7 @@ export type OrderOutcome =
  * Another customer's order and a missing order give the same outcome, so
  * that no answer reveals which order numbers exist.
  */
-export function orderOutcome(
+export function decideOrderOutcome(
   askingCustomer: string,
   answer: ErpAnswer<Order>,
 ): OrderOutcome {
@@ -78,4 +78,59 @@ export function orderOutcome(
     case "unreachable":
       return { kind: "unreachable" };
   }
+}
+
+// What the ERP stage needs from an ERP: the two lookups (CLAUDE.md, ERP
+// stage). The stage gets an Erp passed in instead of building one: the
+// caller decides which ERP it talks to, and tests pass an in-memory fake.
+// TODO(Module 4.5): the ERP client over HTTP implements this interface; the
+// caller builds it from ERP_BASE_URL (mock or real ERP).
+export interface Erp {
+  findCustomerBySender(address: string): Promise<ErpAnswer<Customer>>;
+  getOrderStatus(orderNumber: string): Promise<ErpAnswer<Order>>;
+}
+
+// One recorded order number and its outcome. The number stays as the
+// extraction recorded it (R-15, R-02).
+export type OrderLookup = { recorded: string; outcome: OrderOutcome };
+
+// The result of the ERP stage for one email. "unknown_sender" stands for
+// „Absender ist keinem Kunden zugeordnet.“ and "unreachable" for
+// „Auftragsbestand nicht erreichbar.“ (R-14); in both, nothing was looked
+// up. "assigned" names the asking customer and holds one outcome per
+// recorded order number, in the recorded order.
+export type ErpStageResult =
+  | { kind: "unknown_sender" }
+  | { kind: "unreachable" }
+  | { kind: "assigned"; customerNumber: string; orders: OrderLookup[] };
+
+/**
+ * The ERP stage (POLICY.md R-14 to R-16): finds the asking customer by the
+ * sender address, then looks up every recorded order number and decides
+ * what may be shown.
+ *
+ * Takes only the sender address and the recorded order numbers. Customer
+ * numbers from the email are not an input, so they can't assign the sender
+ * (R-14). Lookups that fail are outcomes, not exceptions.
+ */
+export async function runErpStage(
+  input: { senderAddress: string; orderNumbers: string[] },
+  erp: Erp,
+): Promise<ErpStageResult> {
+  const sender = await erp.findCustomerBySender(
+    normaliseSenderAddress(input.senderAddress),
+  );
+  if (sender.kind === "not_found") return { kind: "unknown_sender" };
+  if (sender.kind === "unreachable") return { kind: "unreachable" };
+
+  const customerNumber = sender.record.customerNumber;
+  const orders = await Promise.all(
+    input.orderNumbers.map(async (recorded): Promise<OrderLookup> => {
+      const orderNumber = normaliseOrderNumber(recorded);
+      if (orderNumber === null) return { recorded, outcome: { kind: "invalid" } };
+      const answer = await erp.getOrderStatus(orderNumber);
+      return { recorded, outcome: decideOrderOutcome(customerNumber, answer) };
+    }),
+  );
+  return { kind: "assigned", customerNumber, orders };
 }
