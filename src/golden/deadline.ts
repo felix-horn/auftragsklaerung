@@ -19,7 +19,7 @@ export function normaliseDeadline(text: string): string {
 // True if the label's wording occurs in the model's quote, after normalising.
 // Containment, not equality: the model is told to quote verbatim, but not how
 // much to quote. Known limit: extra words around the label are accepted.
-export function deadlineQuoteMatches(
+export function isDeadlineQuoteMatch(
   actual: string,
   expected: string,
 ): boolean {

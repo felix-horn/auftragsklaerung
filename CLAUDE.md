@@ -165,9 +165,9 @@ fake fetch (no API), or in a real run of a 04_module/ script.
   call the API. Golden values are imported from src/golden/cases.ts, never copied
   into a test file; hand-written test values are invented. Check every change with
   `npm test` and `npx tsc --noEmit`.
-- Pipeline code lives directly in src/ (urgency.ts, identifiers.ts). Code that
-  compares model output with golden labels lives in src/golden/ (compare.ts,
-  deadline.ts) and is never called by the pipeline. evals/assertions/fields.ts
+- Pipeline code lives directly in src/ (urgency.ts, prefix-assignment.ts,
+  erp-stage.ts). Code that compares model output with golden labels lives in
+  src/golden/ (compare.ts, deadline.ts) and is never called by the pipeline. evals/assertions/fields.ts
   only applies those helpers per field for promptfoo.
 - mock-erp/ stands in for an outside system (Module 4.3): neither pipeline nor
   eval code. It imports the contract from src/erp-contract.ts; nothing in src/
@@ -176,6 +176,16 @@ fake fetch (no API), or in a real run of a 04_module/ script.
   golden-tests.ts); nothing in src/ imports promptfoo. evals/report.ts,
   evals/gate.ts, evals/gate-cli.ts and evals/baseline/ live there too but are not
   loaded by promptfoo: they read exported evals.
+- Comments describe what the code does now. Work that a later module does
+  is marked `// TODO(Module 4.5): short description`, so a search for TODO
+  lists all of it.
+- Exported functions get a JSDoc comment (`/** … */`), so VS Code shows it
+  on hover. New and rewritten functions get one; older functions when they
+  are next rewritten, not for a rename.
+- Booleans start with `is` or `has`: variables, parameters, fields and
+  functions that return one (`isOwnOrder`, `hasSameItems`,
+  `isDeadlineQuoteMatch`). Names fixed by an outside format stay as they
+  are (promptfoo's `pass`).
 - Pipeline functions return data and print nothing. Entry points decide what to
   show: run.ts prints, the promptfoo provider reports to promptfoo.
 - 04_module/ holds Module 4's teaching scripts and experiments. The 4.1 scripts
@@ -299,7 +309,7 @@ tested in the .test.ts file next to it.
   experiments).
 - `deadlineStated`: presence (null vs. text) is a separate check, because a missed
   or invented deadline moves urgency (R-13) and a wording difference does not.
-  Wording: `deadlineQuoteMatches` in src/golden/deadline.ts. The normalised label
+  Wording: `isDeadlineQuoteMatch` in src/golden/deadline.ts. The normalised label
   must be contained in the normalised output (lower case, whitespace collapsed,
   punctuation at the very end removed, on both sides). Containment, not equality:
   the schema says "quoted verbatim" but not how much to quote, and LABELLING.md's
@@ -317,11 +327,11 @@ tested in the .test.ts file next to it.
   no golden case covers. The golden-case tests passed on the first run by
   construction (R-13 was written from the function); their value is catching later
   drift between code and rule.
-- R-09 prefix assignment: `assignByPrefix` in src/identifiers.ts. Pipeline code,
-  not called by extractEmail yet (see Open experiments). Stufe 1 only: a number in
-  the exact R-09 format goes to the list its prefix names; every other number stays
-  in the list the model chose, because Stufe 2 and 3 depend on words only the model
-  sees. Nothing is added, removed or merged. "Exact format" means capital `A-` or
+- R-09 prefix assignment: `assignIdentifiersByPrefix` in
+  src/prefix-assignment.ts. Pipeline code, not called by extractEmail yet (see
+  Open experiments). Stufe 1 only: a number in the exact R-09 format goes to the
+  list its prefix names; every other number stays in the list the model chose,
+  because Stufe 2 and 3 depend on words only the model sees. Nothing is added, removed or merged. "Exact format" means capital `A-` or
   `K-` followed by five digits. This reading was chosen in 3.4; POLICY.md does not
   say whether e.g. "A-5521" carries the prefix. No golden case depends on it; if
   one appears, settle it in POLICY.md.
@@ -725,7 +735,7 @@ The others wait for the larger golden set (Module 6 onward).
   all (R-04), from 0.8 on every E-17 and E-18 answer. Not run; reconsider when the
   golden set has more emails with wrong intents.
 - Prompt language: German DEFAULT_SYSTEM against the English one. Whole set.
-- Prefix assignment: run `assignByPrefix` on the model's numbers inside
+- Prefix assignment: run `assignIdentifiersByPrefix` on the model's numbers inside
   extractEmail. Target: E-21 (orderNumbers and customerNumbers 0/10). It can only
   fix Stufe 1 errors.
 - Reason vs. request (R-04): say in the `intents` description that a fact which

@@ -1,11 +1,11 @@
 import { z } from "zod";
 
 // The contract between the mock ERP and our ERP client: what a customer and
-// an order look like. One definition, imported by both sides. The mock ERP
-// checks its data file against erpDataSchema when it starts (Module 4.3);
-// the client checks every answer against customerSchema or orderSchema
-// (from 4.5). Fields exist only where a step uses them (POLICY.md R-14 to
-// R-17).
+// an order look like. One definition for both sides. The mock ERP checks
+// its data file against erpDataSchema when it starts. Fields exist only
+// where a step uses them (POLICY.md R-14 to R-17).
+// TODO(Module 4.5): the ERP client checks every answer against
+// customerSchema or orderSchema.
 
 // R-09: "K-" or "A-" followed by five digits.
 const customerNumber = z.string().regex(/^K-\d{5}$/);

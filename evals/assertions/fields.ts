@@ -8,7 +8,7 @@ import {
   type GoldenLabels,
 } from "../../src/golden/case-schema.js";
 import { hasSameItems, intentTypes } from "../../src/golden/compare.js";
-import { deadlineQuoteMatches } from "../../src/golden/deadline.js";
+import { isDeadlineQuoteMatch } from "../../src/golden/deadline.js";
 import { deriveUrgency } from "../../src/urgency.js";
 
 // One assertion per labelled field.
@@ -53,10 +53,14 @@ function fieldAssertion(check: FieldCheck) {
 
 // Score 1 for a match, 0 for a miss. The reason shows both sides, so the
 // web view explains every result without opening the output.
-function graded(pass: boolean, got: string, expected: string): GradingResult {
+function graded(
+  hasPassed: boolean,
+  got: string,
+  expected: string,
+): GradingResult {
   return {
-    pass,
-    score: pass ? 1 : 0,
+    pass: hasPassed,
+    score: hasPassed ? 1 : 0,
     reason: `got ${got}, expected ${expected}`,
   };
 }
@@ -77,8 +81,8 @@ export const intents = fieldAssertion((extraction, labels) =>
 export const requestedAction = fieldAssertion((extraction, labels) => {
   const got = extraction.requestedAction;
   const expected = labels.requestedAction;
-  const pass = (got === null) === (expected === null);
-  return graded(pass, show(got), expected === null ? "null" : "an action");
+  const hasPassed = (got === null) === (expected === null);
+  return graded(hasPassed, show(got), expected === null ? "null" : "an action");
 });
 
 export const orderNumbers = fieldAssertion((extraction, labels) =>
@@ -98,7 +102,7 @@ export const escalationSignals = fieldAssertion((extraction, labels) =>
 function deadlineMatches(got: string | null, expected: string | null) {
   if (got === null && expected === null) return true; // neither has one
   if (got === null || expected === null) return false; // missed or invented
-  return deadlineQuoteMatches(got, expected);
+  return isDeadlineQuoteMatch(got, expected);
 }
 
 export const deadlineStated = fieldAssertion((extraction, labels) => {

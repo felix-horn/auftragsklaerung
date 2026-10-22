@@ -187,7 +187,7 @@ type IntentType = EmailExtraction["intents"][number]["type"];
 type IntentRow = {
   id: string;
   type: IntentType;
-  inLabel: boolean;
+  isInLabel: boolean;
   confidences: number[];
 };
 const intentRows: IntentRow[] = [];
@@ -209,7 +209,7 @@ for (const id of ids) {
     intentRows.push({
       id,
       type,
-      inLabel: labelled.includes(type),
+      isInLabel: labelled.includes(type),
       confidences: values,
     });
   }
@@ -227,7 +227,7 @@ for (const row of intentRows) {
     row.confidences.length === 0 ? "-" : low === high ? low : `${low}–${high}`;
   const reported = `${row.confidences.length}/${runs}`;
   console.log(
-    `${row.id}  ${row.type.padEnd(18)} ${(row.inLabel ? "yes" : "NO").padEnd(9)} ${reported.padEnd(9)} ${range}`,
+    `${row.id}  ${row.type.padEnd(18)} ${(row.isInLabel ? "yes" : "NO").padEnd(9)} ${reported.padEnd(9)} ${range}`,
   );
 }
 
@@ -249,7 +249,7 @@ for (const group of groups) {
       .filter((c) => c >= group.from && c < group.to)
       .map(() => row),
   );
-  const inLabel = reports.filter((row) => row.inLabel).length;
+  const inLabel = reports.filter((row) => row.isInLabel).length;
   const emails = new Set(reports.map((row) => row.id)).size;
   console.log(
     `${group.name.padEnd(11)} ${String(reports.length).padStart(7)}  ${String(inLabel).padStart(8)}  ${String(emails).padStart(6)}`,

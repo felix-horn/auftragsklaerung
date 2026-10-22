@@ -33,11 +33,11 @@ function evalExport(
         return { testIdx, failureReason: 2, error: "Overloaded", testCase };
       }
       const componentResults = checks.map((check) => {
-        const pass = !failing.includes(`${id} ${check}`);
+        const hasPassed = !failing.includes(`${id} ${check}`);
         return {
           assertion: { metric: check },
-          pass,
-          reason: pass ? "got [], expected []" : 'got ["other"], expected []',
+          pass: hasPassed,
+          reason: hasPassed ? "got [], expected []" : 'got ["other"], expected []',
         };
       });
       const failureReason = componentResults.every((c) => c.pass) ? 0 : 1;

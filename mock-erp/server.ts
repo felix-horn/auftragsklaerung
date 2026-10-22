@@ -9,7 +9,7 @@ import type { ErpData } from "../src/erp-contract.js";
 // The mock ERP: answers like a company's order system would answer our
 // service account. It serves whatever it is given and checks nothing about
 // who is asking: matching the sender (R-14), adding "A-" (R-15) and refusing
-// other customers' orders (R-16) are our code's job, from Module 4.4 on.
+// other customers' orders (R-16) are our code's job (src/erp-stage.ts).
 //
 // GET /customers?email=<address>  → 200 the customer with this contact address
 //                                    404 no such address (exact match)
