@@ -182,6 +182,9 @@ fake fetch (no API), or in a real run of a 04_module/ script.
 - Exported functions get a JSDoc comment (`/** … */`), so VS Code shows it
   on hover. New and rewritten functions get one; older functions when they
   are next rewritten, not for a rename.
+- Functions are named with a verb (`normaliseOrderNumber`,
+  `decideOrderOutcome`, `runErpStage`), values with a noun. Older names
+  change when the function is next rewritten.
 - Booleans start with `is` or `has`: variables, parameters, fields and
   functions that return one (`isOwnOrder`, `hasSameItems`,
   `isDeadlineQuoteMatch`). Names fixed by an outside format stay as they
@@ -666,7 +669,8 @@ Stands in for the company's ERP. Built in 4.3; our ERP client calls it from
 - No business rule in the mock: it answers like an ERP to our service
   account. The address match is exact (lowercasing the sender is R-14, our
   code), "A-" is never added (R-15, our code), and every order goes to every
-  caller (R-16, our code). All from 4.4 on.
+  caller (R-16, our code). Those rules are in src/erp-stage.ts (ERP stage
+  rules (Module 4.4)).
 - Contract, Felix's decisions (4.3, by committing the recommendation): three
   order statuses, `in_progress` / `shipped` / `delivered` (POLICY.md's
   in Bearbeitung / versandt / geliefert; storniert and teilgeliefert have no
@@ -708,6 +712,58 @@ Stands in for the company's ERP. Built in 4.3; our ERP client calls it from
   throws EADDRINUSE (errno -48 on macOS, -98 on Linux). curl against a closed
   port exits with code 7 and prints no status. In zsh, a URL with `?` must be
   quoted (plain zsh: "no matches found").
+
+## ERP stage rules (Module 4.4)
+
+POLICY.md R-14 to R-16 (v1.7) in src/erp-stage.ts, tested in
+src/erp-stage.test.ts (24 tests, invented records: K-20001 with
+einkauf@/m.weber@alpha.example, K-20002 with bestellung@beta.example,
+A-10001 to A-10003). No API call, no server.
+
+- Pure functions:
+  - `normaliseSenderAddress`: R-14, the address in lower case (the ERP
+    stores lower case and compares exactly). Expects the bare address;
+    taking it out of a "Name <address>" header belongs to ingestion
+    (Module 7).
+  - `normaliseOrderNumber`: R-15 (v1.6). `/^([Aa]-?)?\d{5}$/` becomes "A-"
+    plus the five digits, anything else `null` (= invalid, never sent to
+    the ERP). "A 10001", "A--10001", "K-20001" are invalid. Limit: five
+    bare digits are looked up whether R-09 Stufe 2 or Stufe 3; E-07's
+    "78432" (recorded in 10/10 baseline runs) becomes a lookup of A-78432,
+    E-21's "K-62418" (10/10) is invalid.
+  - `decideOrderOutcome(askingCustomer, answer)`: R-16. Another customer's
+    order and a missing one give the same `refused`.
+- Types: `ErpAnswer<T>` = found (record) / not_found / unreachable, a value,
+  not an exception. `OrderOutcome` = order / refused / invalid /
+  unreachable; only `order` carries data, the whole contract `Order`.
+  `ErpStageResult` = unknown_sender / unreachable (R-14, v1.7: ERP down at
+  the sender lookup; nothing looked up) / assigned (customerNumber plus one
+  `{ recorded, outcome }` per recorded number, in the recorded order, the
+  number as recorded).
+- `runErpStage(input, erp)`: sender first; for unknown_sender and
+  unreachable nothing else is asked. Order lookups run concurrently
+  (`Promise.all`), the results keep the recorded order; one unreachable
+  lookup doesn't affect the others; the same number recorded twice is
+  looked up twice (nothing merged). The input has no customer numbers, so
+  they can't assign the sender (R-14).
+- The ERP is passed in (`Erp` interface, two functions). `ERP_BASE_URL`
+  (4.5) picks which server the HTTP client talks to; the parameter picks
+  HTTP client or in-memory fake. Rejected: a module-level client imported
+  by the stage (DKLB style), because unit tests would then need `vi.mock`
+  or the mock server, and test-only behaviour lands in the mock or in
+  production code (an "is this the mock?" check on the URL, which drifts
+  when deployments change). The AI SDK works the same way:
+  `generateText({ model })`, with test doubles in `ai/test`.
+- The fake ERP lives in src/erp-stage.test.ts: exact matching like the mock,
+  no business rule, records every lookup in `calls`, and fails for every
+  address or order number in its `unreachable` list.
+- Outcome texts: the code holds kinds (`refused`, …); the comments name the
+  POLICY.md text for each. The German texts get one table in 4.7, where
+  run.ts first prints them.
+- Felix's decisions (POLICY.md, by committing the recommendation): v1.6
+  R-15, lower-case prefix or missing hyphen is looked up, a space stays
+  invalid; v1.7 R-14, ERP unreachable at the sender lookup records
+  „Auftragsbestand nicht erreichbar.“ (not „keinem Kunden zugeordnet“).
 
 ## Open experiments
 
@@ -798,7 +854,12 @@ The others wait for the larger golden set (Module 6 onward).
   Bekannte Lücken (since v1.4) records the business side.
 - Reply drafting is Module 6b (added to the roadmap in 3.1 as Module 5b). The
   LLM-as-judge eval for drafts and the reply-language decision go with it.
-- Does `requestedAction` earn its place in the approval queue UI? Module 8.
+- Do `requestedAction` and `customerNumbers` earn their place in the approval
+  queue UI? Module 8. `customerNumbers` has no pipeline consumer: the ERP
+  stage never takes it (R-14). A possible consumer is a hint for the clerk
+  when the sender is unknown (R-14's third example), display only. Removing
+  the field may push K- numbers into `orderNumbers` (E-21 already does so in
+  10/10 baseline runs), so it needs a ten-run eval.
 - POLICY.md's examples are taken from the golden-set emails. So POLICY.md, or
   any excerpt of it, must never be put into the prompt: the eval would then
   measure how well the model repeats examples it was shown, not how it handles
