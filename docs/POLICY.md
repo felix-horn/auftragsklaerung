@@ -1,7 +1,7 @@
 # Auftragsklärung — Fachliche Regeln
 
-**Version:** v1.6
-**Stand:** 21.10.2026
+**Version:** v1.7
+**Stand:** 22.10.2026
 
 ## Zweck dieses Dokuments
 
@@ -554,6 +554,10 @@ und Kleinschreibung der Adresse spielen keine Rolle.
 Ist die Absenderadresse für keinen Kunden hinterlegt, wird „Absender ist
 keinem Kunden zugeordnet.“ festgehalten.
 
+Ist der Auftragsbestand bei der Zuordnung nicht erreichbar, wird
+„Auftragsbestand nicht erreichbar.“ festgehalten und nichts abgefragt. Wie
+bei R-16 ist damit nichts entschieden; der Abgleich wird wiederholt.
+
 Eine Kunden- oder Auftragsnummer in der Nachricht ordnet den Absender keinem
 Kunden zu, auch nicht zusätzlich zur Absenderadresse.
 
@@ -568,15 +572,20 @@ Beispiele:
 - Ein neuer Mitarbeiter des Kunden schreibt von seiner noch nicht
   hinterlegten Adresse. — Absender ist keinem Kunden zugeordnet. Der
   Bearbeiter klärt, wer schreibt, und lässt die Adresse hinterlegen.
+- Die Nachricht von m.brenner@brenner-hydraulik.example kommt an, während
+  der Auftragsbestand nicht erreichbar ist. — „Auftragsbestand nicht
+  erreichbar.“; A-70214 wird nicht abgefragt.
 
 **Begründung:** Kundennummern stehen auf jeder Rechnung, jeder
 Auftragsbestätigung und jedem Lieferschein; wer eine Nummer nennt, weist sich
 damit nicht aus. Eine hinterlegte Absenderadresse kann nur nutzen, wer Zugang
 zu diesem Postfach hat. Eine fälschliche Ablehnung kostet den Bearbeiter eine
 Rückfrage, eine fälschliche Auskunft gibt die Geschäftsdaten eines Kunden an
-Dritte weiter.
+Dritte weiter. Ein nicht erreichbarer Auftragsbestand ist keine Ablehnung
+(R-16); als „keinem Kunden zugeordnet“ festgehalten, sähe eine Störung aus
+wie eine unbekannte Adresse.
 
-**Seit:** v1.4
+**Seit:** v1.4, geändert in v1.7
 
 ### R-15 — Abgefragt werden die festgehaltenen Auftragsnummern
 
@@ -773,3 +782,4 @@ Bewusst nicht geregelt, jeweils mit Begründung.
 | v1.4 | 18.10.2026 | Abschnitt Abgleich mit dem Auftragsbestand ergänzt: Zuordnung des Absenders (R-14), abgefragte Auftragsnummern (R-15), Auskunft nur zu Aufträgen des anfragenden Kunden (R-16), Dringlichkeit nach dem Abgleich (R-17). Überschrittene Zusagen und Stornierungen vor dem Versand aus den Bekannten Lücken in R-17 übernommen; neu in den Bekannten Lücken: gefälschte Absenderadressen, Nachrichten ohne gültige Auftragsnummer, Rechnungen und Dokumente. R-12 und R-13 verweisen auf R-17. Keine Bewertung betroffen. |
 | v1.5 | 20.10.2026 | Bekannte Lücken ergänzt: mehrfach hinterlegte Absenderadressen (R-14). Keine Bewertung betroffen. |
 | v1.6 | 21.10.2026 | R-15: Eine Auftragsnummer mit klein geschriebenem Präfix oder ohne Bindestrich wird als „A-“ mit fünf Ziffern abgefragt. Keine Bewertung betroffen. |
+| v1.7 | 22.10.2026 | R-14: Ist der Auftragsbestand bei der Zuordnung nicht erreichbar, wird „Auftragsbestand nicht erreichbar.“ festgehalten und nichts abgefragt. Keine Bewertung betroffen. |
