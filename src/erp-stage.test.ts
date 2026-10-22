@@ -1,5 +1,10 @@
 import { expect, test } from "vitest";
-import { orderNumberForLookup, senderAddressForLookup } from "./erp-stage.js";
+import type { Order } from "./erp-contract.js";
+import {
+  orderNumberForLookup,
+  orderOutcome,
+  senderAddressForLookup,
+} from "./erp-stage.js";
 
 // Invented addresses and numbers, from the same invented customers as
 // src/erp-contract.test.ts (K-20001 at alpha.example, K-20002 at
@@ -66,4 +71,73 @@ test("R-15: other numbers recorded by mistake are not looked up", () => {
 
 test("limit: any five digits get A-, also a customer number recorded without its prefix", () => {
   expect(orderNumberForLookup("20001")).toBe("A-20001");
+});
+
+// R-16: the outcome per looked-up number. The asking customer is K-20001.
+// A-10001 and A-10002 are its orders, A-10003 belongs to K-20002.
+
+const ownOrderInProgress: Order = {
+  orderNumber: "A-10001",
+  customerNumber: "K-20001",
+  status: "in_progress",
+  promisedDeliveryDate: "2026-11-02",
+  shippedOn: null,
+};
+
+const ownOrderShipped: Order = {
+  orderNumber: "A-10002",
+  customerNumber: "K-20001",
+  status: "shipped",
+  promisedDeliveryDate: "2026-10-23",
+  shippedOn: "2026-10-20",
+};
+
+const otherCustomersOrder: Order = {
+  orderNumber: "A-10003",
+  customerNumber: "K-20002",
+  status: "delivered",
+  promisedDeliveryDate: null,
+  shippedOn: "2026-10-01",
+};
+
+test("R-16: the asking customer's own order: status, promised date and shipping date", () => {
+  expect(
+    orderOutcome("K-20001", { kind: "found", record: ownOrderInProgress }),
+  ).toEqual({ kind: "order", order: ownOrderInProgress });
+  expect(
+    orderOutcome("K-20001", { kind: "found", record: ownOrderShipped }),
+  ).toEqual({ kind: "order", order: ownOrderShipped });
+});
+
+test("R-16: another customer's order is refused, with nothing about the order", () => {
+  expect(
+    orderOutcome("K-20001", { kind: "found", record: otherCustomersOrder }),
+  ).toEqual({ kind: "refused" });
+});
+
+test("R-16: a missing order is refused", () => {
+  expect(orderOutcome("K-20001", { kind: "not_found" })).toEqual({
+    kind: "refused",
+  });
+});
+
+test("R-16: another customer's order and a missing order give the same outcome", () => {
+  expect(
+    orderOutcome("K-20001", { kind: "found", record: otherCustomersOrder }),
+  ).toEqual(orderOutcome("K-20001", { kind: "not_found" }));
+});
+
+test("R-16: an unreachable ERP is not a refusal", () => {
+  expect(orderOutcome("K-20001", { kind: "unreachable" })).toEqual({
+    kind: "unreachable",
+  });
+});
+
+test("R-16: the same order is refused for one customer and shown to its owner", () => {
+  const answer = { kind: "found", record: otherCustomersOrder } as const;
+  expect(orderOutcome("K-20001", answer)).toEqual({ kind: "refused" });
+  expect(orderOutcome("K-20002", answer)).toEqual({
+    kind: "order",
+    order: otherCustomersOrder,
+  });
 });
