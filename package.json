@@ -19,6 +19,7 @@
   "type": "module",
   "devDependencies": {
     "@types/node": "^26.4.1",
+    "orval": "8.44.0",
     "promptfoo": "0.123.0",
     "tsx": "4.23.13",
     "typescript": "^7.0.2",
