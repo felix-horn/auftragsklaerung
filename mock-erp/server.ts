@@ -4,7 +4,7 @@ import {
   type Server,
   type ServerResponse,
 } from "node:http";
-import type { ErpData } from "../src/erp-contract.js";
+import type { ErpData } from "./data-schema.js";
 
 // The mock ERP: answers like a company's order system would answer our
 // service account. It serves whatever it is given and checks nothing about

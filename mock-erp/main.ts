@@ -1,10 +1,12 @@
 // Starts the mock ERP: npm run erp. Runs until Ctrl+C.
-// Reads mock-erp/data.json, checks it against the ERP contract and refuses
-// to start if anything breaks it. Listens only on this machine.
+// Reads mock-erp/data.json, checks it against the rules for the data file
+// (mock-erp/data-schema.ts: the ERP contract plus lower case and nothing
+// twice) and refuses to start if anything breaks them. Listens only on this
+// machine.
 
 import { readFileSync } from "node:fs";
 import { z } from "zod";
-import { erpDataSchema } from "../src/erp-contract.js";
+import { erpDataSchema } from "./data-schema.js";
 import { createMockErp } from "./server.js";
 
 const PORT = 4100;
@@ -17,7 +19,9 @@ const result = erpDataSchema.safeParse(
 );
 
 if (!result.success) {
-  console.error("Not started: mock-erp/data.json breaks the ERP contract.");
+  console.error(
+    "Not started: mock-erp/data.json breaks the rules in mock-erp/data-schema.ts.",
+  );
   console.error(z.prettifyError(result.error));
   process.exit(1);
 }

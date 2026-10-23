@@ -1,0 +1,157 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Auftragsbestand API",
+    "description": "Read access to customers and orders for internal services.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "Generated server url"
+    }
+  ],
+  "paths": {
+    "/customers": {
+      "get": {
+        "tags": ["customer-controller"],
+        "summary": "Find the customer a contact address is registered for",
+        "operationId": "findCustomerByEmail",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "description": "Contact address. Compared exactly with the stored addresses, which are lower case.",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The customer this address is registered for",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Customer" }
+              }
+            }
+          },
+          "400": {
+            "description": "No email given",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "example": { "error": "query parameter email is required" }
+              }
+            }
+          },
+          "404": {
+            "description": "No customer has this contact address",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "example": { "error": "no customer with this contact address" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders/{orderNumber}": {
+      "get": {
+        "tags": ["order-controller"],
+        "summary": "Get an order by its number",
+        "operationId": "getOrder",
+        "parameters": [
+          {
+            "name": "orderNumber",
+            "in": "path",
+            "description": "Order number, compared exactly.",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The order",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Order" }
+              }
+            }
+          },
+          "404": {
+            "description": "No order has this number",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "example": { "error": "no order with this number" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Customer": {
+        "type": "object",
+        "properties": {
+          "customerNumber": {
+            "type": "string",
+            "pattern": "^K-\\d{5}$"
+          },
+          "contactEmails": {
+            "type": "array",
+            "description": "Contact addresses, stored in lower case",
+            "items": { "type": "string", "format": "email" }
+          }
+        },
+        "required": ["contactEmails", "customerNumber"]
+      },
+      "Order": {
+        "type": "object",
+        "properties": {
+          "orderNumber": {
+            "type": "string",
+            "pattern": "^A-\\d{5}$"
+          },
+          "customerNumber": {
+            "type": "string",
+            "description": "The customer the order belongs to",
+            "pattern": "^K-\\d{5}$"
+          },
+          "status": {
+            "type": "string",
+            "description": "in_progress: not shipped yet; shipped: on its way; delivered: arrived",
+            "enum": ["in_progress", "shipped", "delivered"]
+          },
+          "promisedDeliveryDate": {
+            "type": ["string", "null"],
+            "format": "date",
+            "description": "Delivery date promised to the customer; null while none has been promised"
+          },
+          "shippedOn": {
+            "type": ["string", "null"],
+            "format": "date",
+            "description": "Shipping date; null while the order has not been shipped"
+          }
+        },
+        "required": [
+          "customerNumber",
+          "orderNumber",
+          "promisedDeliveryDate",
+          "shippedOn",
+          "status"
+        ]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string" }
+        },
+        "required": ["error"]
+      }
+    }
+  }
+}

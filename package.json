@@ -6,6 +6,7 @@
   "scripts": {
     "dump": "tsx src/dump-body.ts",
     "erp": "tsx mock-erp/main.ts",
+    "erp:generate": "orval --config orval.config.ts",
     "eval": "PROMPTFOO_DISABLE_TELEMETRY=1 promptfoo eval --config evals/promptfooconfig.yaml --no-cache",
     "eval:gate": "tsx evals/gate-cli.ts",
     "eval:report": "tsx evals/report.ts",

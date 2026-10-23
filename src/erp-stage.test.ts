@@ -9,7 +9,7 @@ import {
 } from "./erp-stage.js";
 
 // Invented addresses and numbers, from the same invented customers as
-// src/erp-contract.test.ts (K-20001 at alpha.example, K-20002 at
+// mock-erp/data-schema.test.ts (K-20001 at alpha.example, K-20002 at
 // beta.example). None is copied from the golden set, from POLICY.md or from
 // mock-erp/data.json.
 

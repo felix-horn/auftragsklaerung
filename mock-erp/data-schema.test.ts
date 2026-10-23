@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { erpDataSchema } from "./erp-contract.js";
+import { erpDataSchema } from "./data-schema.js";
 
 // Invented customers and orders. None is copied from the golden set or from
 // POLICY.md. Each test changes one thing in a fresh copy and expects exactly
@@ -39,7 +39,8 @@ function validData() {
   };
 }
 
-// Every problem the contract finds, as "where: what".
+// Every problem erpDataSchema finds, as "where: what": the contract's own
+// checks plus the data file's rules (lower case, nothing twice).
 function problems(data: unknown): string[] {
   const result = erpDataSchema.safeParse(data);
   if (result.success) return [];
@@ -52,27 +53,24 @@ test("all three statuses, one order without a promised date: no problems", () =>
   expect(problems(validData())).toEqual([]);
 });
 
-test("an order in progress cannot have a shipping date", () => {
-  const data = validData();
-  data.orders[0].shippedOn = "2026-10-20";
-  expect(problems(data)).toEqual([
-    "orders.0.shippedOn: Invalid input: expected null, received string",
-  ]);
-});
+// Since Module 4.5 the contract comes from the ERP's OpenAPI document,
+// which describes one order shape for every status. Until 4.4 our own
+// contract refused both of these.
+test("the contract does not tie the shipping date to the status", () => {
+  const inProgressWithDate = validData();
+  inProgressWithDate.orders[0].shippedOn = "2026-10-20";
+  expect(problems(inProgressWithDate)).toEqual([]);
 
-test("a shipped order must have a shipping date", () => {
-  const data = validData();
-  data.orders[1].shippedOn = null;
-  expect(problems(data)).toEqual([
-    "orders.1.shippedOn: Invalid input: expected string, received null",
-  ]);
+  const shippedWithoutDate = validData();
+  shippedWithoutDate.orders[1].shippedOn = null;
+  expect(problems(shippedWithoutDate)).toEqual([]);
 });
 
 test("a status outside the three is refused", () => {
   const data = validData();
   data.orders[0].status = "cancelled";
   expect(problems(data)).toEqual([
-    "orders.0.status: Invalid discriminator value. Expected 'in_progress' | 'shipped' | 'delivered'",
+    'orders.0.status: Invalid option: expected one of "in_progress"|"shipped"|"delivered"',
   ]);
 });
 
