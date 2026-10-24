@@ -1,7 +1,7 @@
 # Runs the project's checks on GitHub's machines after every push, every
-# night, and on demand: install, type check, unit tests, then one eval run
-# (22 API calls, about 12.5 US cents) judged by the gate against
-# evals/baseline/.
+# night, and on demand: install, generated code, type check, unit tests,
+# then one eval run (22 API calls, about 12.5 US cents) judged by the gate
+# against evals/baseline/.
 name: CI
 
 on:
@@ -32,6 +32,17 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      # The Zod schemas in src/generated/ must be what orval generates from
+      # the documents in contracts/ today. Fails, and shows the difference,
+      # when a document was replaced without `npm run erp:generate` or a
+      # generated file was edited by hand.
+      - name: Generated code matches contracts/
+        run: |
+          npm run erp:generate
+          git --no-pager diff -- src/generated/
+          git status --short -- src/generated/
+          test -z "$(git status --porcelain -- src/generated/)"
 
       - name: Type check
         run: npx tsc --noEmit
