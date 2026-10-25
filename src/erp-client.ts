@@ -1,9 +1,10 @@
 import type { z } from "zod";
 import {
   type Customer,
+  customerNotFoundSchema,
   customerSchema,
-  errorBodySchema,
   type Order,
+  orderNotFoundSchema,
   orderSchema,
 } from "./erp-contract.js";
 import type { Erp, ErpAnswer } from "./erp-stage.js";
@@ -14,22 +15,17 @@ import type { Erp, ErpAnswer } from "./erp-stage.js";
 // src/erp-stage.ts. The ERP's paths and answers are those of its OpenAPI
 // document, contracts/erp-api.json.
 
-// The texts of the two documented 404 answers (the document's examples).
-// A 404 with any other body is not "no such record": the mock ERP answers
-// "no such endpoint" for a path it doesn't have, which is what a wrong base
-// URL produces, and a real server answers with its own error page.
-const NO_CUSTOMER = "no customer with this contact address";
-const NO_ORDER = "no order with this number";
-
 /**
  * The ERP client: looks customers and orders up over HTTP at baseUrl
  * (Config.erpBaseUrl, no trailing slash).
  *
  * Only the answers the ERP's OpenAPI document lists count: 200 with a body
- * the contract accepts is "found", 404 with the documented text is
- * "not_found". Everything else is "unreachable": a reply that says nothing
- * reliable about the record must never look like a missing customer or
- * order (POLICY.md R-14, R-16).
+ * the contract accepts is "found", 404 with the documented body (one
+ * allowed error text per operation) is "not_found". Everything else is
+ * "unreachable", including a 404 with another body: the mock ERP's "no such
+ * endpoint" for a wrong base URL, or a real server's own error page. A
+ * reply that says nothing reliable about the record must never look like
+ * a missing customer or order (POLICY.md R-14, R-16).
  */
 export function createErpClient(baseUrl: string): Erp {
   return {
@@ -40,14 +36,14 @@ export function createErpClient(baseUrl: string): Erp {
       return lookUp<Customer>(
         `${baseUrl}/customers?${query}`,
         customerSchema,
-        NO_CUSTOMER,
+        customerNotFoundSchema,
       );
     },
     getOrderStatus(orderNumber) {
       return lookUp<Order>(
         `${baseUrl}/orders/${encodeURIComponent(orderNumber)}`,
         orderSchema,
-        NO_ORDER,
+        orderNotFoundSchema,
       );
     },
   };
@@ -57,7 +53,7 @@ export function createErpClient(baseUrl: string): Erp {
 async function lookUp<T>(
   url: string,
   recordSchema: z.ZodType<T>,
-  notFoundText: string,
+  notFoundSchema: z.ZodType,
 ): Promise<ErpAnswer<T>> {
   // TODO(Module 4.5): part 6 adds a timeout, and the details of every
   // "unreachable" for developers.
@@ -68,11 +64,8 @@ async function lookUp<T>(
       const record = recordSchema.safeParse(body);
       if (record.success) return { kind: "found", record: record.data };
     }
-    if (response.status === 404) {
-      const error = errorBodySchema.safeParse(body);
-      if (error.success && error.data.error === notFoundText) {
-        return { kind: "not_found" };
-      }
+    if (response.status === 404 && notFoundSchema.safeParse(body).success) {
+      return { kind: "not_found" };
     }
     return { kind: "unreachable" };
   } catch {

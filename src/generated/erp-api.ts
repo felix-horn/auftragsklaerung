@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Auftragsbestand API
  * Read access to customers and orders for internal services.
- * OpenAPI spec version: 1.0.0
+ * OpenAPI spec version: 1.1.0
  */
 import * as zod from 'zod';
 
@@ -27,7 +27,7 @@ export const FindCustomerByEmail400Response = zod.object({
 })
 
 export const FindCustomerByEmail404Response = zod.object({
-  "error": zod.string()
+  "error": zod.enum(['no customer with this contact address'])
 })
 
 
@@ -51,5 +51,5 @@ export const GetOrder200Response = zod.object({
 })
 
 export const GetOrder404Response = zod.object({
-  "error": zod.string()
+  "error": zod.enum(['no order with this number'])
 })

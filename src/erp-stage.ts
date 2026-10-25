@@ -83,8 +83,8 @@ export function decideOrderOutcome(
 // What the ERP stage needs from an ERP: the two lookups (CLAUDE.md, ERP
 // stage). The stage gets an Erp passed in instead of building one: the
 // caller decides which ERP it talks to, and tests pass an in-memory fake.
-// TODO(Module 4.5): the ERP client over HTTP implements this interface; the
-// caller builds it from ERP_BASE_URL (mock or real ERP).
+// src/erp-client.ts implements it over HTTP; an entry point builds that
+// client from ERP_BASE_URL (src/config.ts), for the mock or a real ERP.
 export interface Erp {
   findCustomerBySender(address: string): Promise<ErpAnswer<Customer>>;
   getOrderStatus(orderNumber: string): Promise<ErpAnswer<Order>>;

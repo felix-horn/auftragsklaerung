@@ -2,8 +2,10 @@ import type { AddressInfo } from "node:net";
 import { afterAll, beforeAll, expect, test, vi } from "vitest";
 import type { z } from "zod";
 import {
+  customerNotFoundSchema,
   customerSchema,
-  errorBodySchema,
+  missingEmailSchema,
+  orderNotFoundSchema,
   orderSchema,
 } from "../src/erp-contract.js";
 import type { ErpData } from "./data-schema.js";
@@ -84,16 +86,16 @@ test("GET /customers with a registered address: 200, a Customer", async () => {
   );
 });
 
-test("GET /customers with an unknown address: 404, an ErrorResponse", async () => {
+test("GET /customers with an unknown address: 404, the documented text", async () => {
   await expectDocumentedAnswer(
     "/customers?email=nobody%40alpha.example",
     404,
-    errorBodySchema,
+    customerNotFoundSchema,
   );
 });
 
 test("GET /customers without email: 400, an ErrorResponse", async () => {
-  await expectDocumentedAnswer("/customers", 400, errorBodySchema);
+  await expectDocumentedAnswer("/customers", 400, missingEmailSchema);
 });
 
 test("GET /orders/{orderNumber}, an order in progress and a delivered one: 200, an Order", async () => {
@@ -101,6 +103,6 @@ test("GET /orders/{orderNumber}, an order in progress and a delivered one: 200, 
   await expectDocumentedAnswer("/orders/A-10003", 200, orderSchema);
 });
 
-test("GET /orders/{orderNumber} with an unknown number: 404, an ErrorResponse", async () => {
-  await expectDocumentedAnswer("/orders/A-99999", 404, errorBodySchema);
+test("GET /orders/{orderNumber} with an unknown number: 404, the documented text", async () => {
+  await expectDocumentedAnswer("/orders/A-99999", 404, orderNotFoundSchema);
 });

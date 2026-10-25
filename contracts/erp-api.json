@@ -3,7 +3,7 @@
   "info": {
     "title": "Auftragsbestand API",
     "description": "Read access to customers and orders for internal services.",
-    "version": "1.0.0"
+    "version": "1.1.0"
   },
   "servers": [
     {
@@ -48,8 +48,7 @@
             "description": "No customer has this contact address",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
-                "example": { "error": "no customer with this contact address" }
+                "schema": { "$ref": "#/components/schemas/CustomerNotFoundResponse" }
               }
             }
           }
@@ -83,8 +82,7 @@
             "description": "No order has this number",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
-                "example": { "error": "no order with this number" }
+                "schema": { "$ref": "#/components/schemas/OrderNotFoundResponse" }
               }
             }
           }
@@ -149,6 +147,26 @@
         "type": "object",
         "properties": {
           "error": { "type": "string" }
+        },
+        "required": ["error"]
+      },
+      "CustomerNotFoundResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "enum": ["no customer with this contact address"]
+          }
+        },
+        "required": ["error"]
+      },
+      "OrderNotFoundResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "enum": ["no order with this number"]
+          }
         },
         "required": ["error"]
       }

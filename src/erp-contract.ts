@@ -1,6 +1,8 @@
 import { z } from "zod";
 import {
   FindCustomerByEmail200Response,
+  FindCustomerByEmail400Response,
+  FindCustomerByEmail404Response,
   GetOrder200Response,
   GetOrder404Response,
 } from "./generated/erp-api.js";
@@ -15,8 +17,6 @@ import {
 // The document describes an order as one object for every status: it does
 // not tie shippedOn to the status. Code that needs both must not assume
 // they agree.
-// TODO(Module 4.5): the ERP client checks every answer against
-// customerSchema or orderSchema.
 
 // GET /customers?email=<address>, answer 200.
 export const customerSchema = FindCustomerByEmail200Response;
@@ -24,11 +24,18 @@ export const customerSchema = FindCustomerByEmail200Response;
 // GET /orders/<orderNumber>, answer 200.
 export const orderSchema = GetOrder200Response;
 
-// The body of every documented 400 and 404: { "error": "<text>" }. The
-// document uses one component (ErrorResponse) for all of them, so orval's
-// FindCustomerByEmail400Response, FindCustomerByEmail404Response and
-// GetOrder404Response are the same Zod schema; one of them stands for all.
-export const errorBodySchema = GetOrder404Response;
+// GET /customers?email=<address>, answer 404: no customer has this
+// address. The document allows exactly one text, so a 404 with any other
+// body (a wrong base URL, another server's error page) fails this schema.
+export const customerNotFoundSchema = FindCustomerByEmail404Response;
+
+// GET /orders/<orderNumber>, answer 404: no order has this number. One
+// allowed text, as above.
+export const orderNotFoundSchema = GetOrder404Response;
+
+// GET /customers without email, answer 400. Our client always sends an
+// address; the mock's test checks that this answer, too, is documented.
+export const missingEmailSchema = FindCustomerByEmail400Response;
 
 export type Customer = z.infer<typeof customerSchema>;
 export type Order = z.infer<typeof orderSchema>;
