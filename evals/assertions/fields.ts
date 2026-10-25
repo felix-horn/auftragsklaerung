@@ -6,9 +6,9 @@ import {
 import {
   goldenLabelsSchema,
   type GoldenLabels,
-} from "../../src/golden/case-schema.js";
-import { hasSameItems, intentTypes } from "../../src/golden/compare.js";
-import { isDeadlineQuoteMatch } from "../../src/golden/deadline.js";
+} from "../golden/case-schema.js";
+import { hasSameItems, intentTypes } from "../golden/compare.js";
+import { isDeadlineQuoteMatch } from "../golden/deadline.js";
 import { deriveUrgency } from "../../src/urgency.js";
 
 // One assertion per labelled field.

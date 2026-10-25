@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { emailExtractionSchema } from "../schema.js";
+import { emailExtractionSchema } from "../../src/schema.js";
 
 // Code values come from the extraction schema, so they cannot drift apart:
 // rename a value there, and every label still using the old one fails to load.

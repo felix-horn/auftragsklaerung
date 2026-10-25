@@ -12,7 +12,7 @@ import type { Erp, ErpAnswer } from "./erp-stage.js";
 // or the mock ERP, whichever answers at the base URL. It carries requests
 // and translates answers into ErpAnswer; the rules R-14 to R-16 stay in
 // src/erp-stage.ts. The ERP's paths and answers are those of its OpenAPI
-// document, contracts/erp-openapi.json.
+// document, contracts/erp-api.json.
 
 // The texts of the two documented 404 answers (the document's examples).
 // A 404 with any other body is not "no such record": the mock ERP answers

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { z } from "zod";
 import { emailExtractionSchema, type EmailExtraction } from "../src/schema.js";
-import { goldenLabelsSchema } from "../src/golden/case-schema.js";
+import { goldenLabelsSchema } from "./golden/case-schema.js";
 
 // Reads one exported eval (npx promptfoo export eval <id> -o <file>.json)
 // and prints, for an eval run with --repeat:

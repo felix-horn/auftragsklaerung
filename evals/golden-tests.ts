@@ -1,5 +1,5 @@
 import type { TestCase } from "promptfoo";
-import { goldenCases } from "../src/golden/cases.js";
+import { goldenCases } from "./golden/cases.js";
 
 // promptfoo calls this function once, while loading the config,
 // and runs one test case per golden case.

@@ -1,8 +1,8 @@
 import { expect, test } from "vitest";
 import type { AssertionValueFunctionContext } from "promptfoo";
 import type { EmailExtraction } from "../../src/schema.js";
-import type { GoldenLabels } from "../../src/golden/case-schema.js";
-import { goldenCases } from "../../src/golden/cases.js";
+import type { GoldenLabels } from "../golden/case-schema.js";
+import { goldenCases } from "../golden/cases.js";
 import * as fields from "./fields.js";
 
 // The context promptfoo passes to an assertion. The field assertions read

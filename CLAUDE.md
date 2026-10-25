@@ -158,22 +158,37 @@ fake fetch (no API), or in a real run of a 04_module/ script.
 - Code values live in two places that nothing links: the enums in
   src/schema.ts and the mapping tables in docs/LABELLING.md (section
   Zuordnung). After renaming an enum value, update LABELLING.md by hand.
-  src/golden/cases.ts needs no reminder: it imports the enums and fails to
+  evals/golden/cases.ts needs no reminder: it imports the enums and fails to
   load on a stale value.
 - Tests: `<name>.test.ts` next to the file under test, explicit
   `import { expect, test } from "vitest"`, no vitest config file. Unit tests never
-  call the API. Golden values are imported from src/golden/cases.ts, never copied
+  call the API. Golden values are imported from evals/golden/cases.ts, never copied
   into a test file; hand-written test values are invented. Check every change with
   `npm test` and `npx tsc --noEmit`.
+- Top-level folders are sorted by role, not by topic (4.5): src/ is our
+  application, the code that runs when an email is processed (pipeline,
+  entry points such as run.ts, config.ts, src/generated/); evals/ measures it;
+  mock-erp/ stands in for another team's system; contracts/ holds documents
+  received from other teams; docs/ our specifications and records;
+  04_module/ teaching scripts. A file that belongs to two topics (R-17 reads
+  extraction and ERP data) still has one role.
 - Pipeline code lives directly in src/ (urgency.ts, prefix-assignment.ts,
-  erp-stage.ts). Code that compares model output with golden labels lives in
-  src/golden/ (compare.ts, deadline.ts) and is never called by the pipeline. evals/assertions/fields.ts
-  only applies those helpers per field for promptfoo.
+  erp-stage.ts, erp-client.ts). The golden set and the code that compares
+  model output with golden labels live in evals/golden/ (cases.ts, compare.ts,
+  deadline.ts; moved from src/golden/ in 4.5) and are never called by the
+  pipeline. Tests and entry points may import them (urgency.test.ts, run.ts).
+  evals/assertions/fields.ts only applies those helpers per field for
+  promptfoo.
+- contracts/ holds documents other teams own (contracts/erp-api.json, the
+  ERP's OpenAPI document): never edited, replaced as a whole.
+  src/generated/ holds code generated from them (npm run erp:generate):
+  never edited by hand, committed, and checked by CI against a fresh
+  generation.
 - mock-erp/ stands in for an outside system (Module 4.3): neither pipeline nor
   eval code. It imports the contract from src/erp-contract.ts; nothing in src/
   imports mock-erp/.
 - Everything promptfoo loads lives in evals/ (config, providers/, assertions/,
-  golden-tests.ts); nothing in src/ imports promptfoo. evals/report.ts,
+  golden-tests.ts, which loads golden/); nothing in src/ imports promptfoo. evals/report.ts,
   evals/gate.ts, evals/gate-cli.ts and evals/baseline/ live there too but are not
   loaded by promptfoo: they read exported evals.
 - Comments describe what the code does now. Work that a later module does
@@ -266,7 +281,7 @@ fake fetch (no API), or in a real run of a 04_module/ script.
 
 - `npm test` — runs every \*.test.ts file once (vitest); no API calls
 - `npx tsc --noEmit` — type check; the only one
-- `npm run extract` — runs the 22 golden-set emails (src/golden/cases.ts) through the extractor
+- `npm run extract` — runs the 22 golden-set emails (evals/golden/cases.ts) through the extractor
 - `npm run golden:check` — validates the golden set and reports how many cases are labelled
 - `DUMP_REQUEST_BODY=<path> npm run dump` — one API call, writes the exact wire payload
 - `npm run eval` — promptfoo runs the 22 golden cases through extractEmail (22 API
@@ -304,7 +319,7 @@ How a model output is compared with a golden label from 3.6 on. Each function is
 tested in the .test.ts file next to it.
 
 - Lists (`intents`, `orderNumbers`, `customerNumbers`, `escalationSignals`):
-  `hasSameItems` in src/golden/compare.ts. Order is ignored; duplicates count
+  `hasSameItems` in evals/golden/compare.ts. Order is ignored; duplicates count
   (both sides are sorted, not turned into a Set), so a doubled value in the output
   fails. Identifiers are compared exactly, without tolerance.
 - `intents`: reduced to their code values with `intentTypes` first. Confidence is
@@ -312,7 +327,7 @@ tested in the .test.ts file next to it.
   experiments).
 - `deadlineStated`: presence (null vs. text) is a separate check, because a missed
   or invented deadline moves urgency (R-13) and a wording difference does not.
-  Wording: `isDeadlineQuoteMatch` in src/golden/deadline.ts. The normalised label
+  Wording: `isDeadlineQuoteMatch` in evals/golden/deadline.ts. The normalised label
   must be contained in the normalised output (lower case, whitespace collapsed,
   punctuation at the very end removed, on both sides). Containment, not equality:
   the schema says "quoted verbatim" but not how much to quote, and LABELLING.md's
@@ -343,7 +358,7 @@ tested in the .test.ts file next to it.
 
 - evals/providers/extract-email.ts calls extractEmail: the pipeline is under test,
   not the prompt in isolation. It reports token usage to promptfoo.
-- Test cases come from src/golden/cases.ts through evals/golden-tests.ts (one per
+- Test cases come from evals/golden/cases.ts through evals/golden-tests.ts (one per
   case: description = id, vars.email = email, metadata.labels = labels; see Eval
   assertions).
 - The prompt template is `'{{email}}'`, a passthrough. With the echo provider, all
@@ -808,6 +823,16 @@ The others wait for the larger golden set (Module 6 onward).
 
 ## Deferred design questions
 
+- A folder src/erp/ for the ERP's pipeline files (Claude's proposal in 4.5,
+  recorded at Felix's request). Today three files with the erp- prefix
+  (erp-client.ts, erp-contract.ts, erp-stage.ts, plus two tests) sit next to
+  each other in src/. Module 6b adds lookups for reply drafts (customer
+  history, invoices, documents); at about eight files the subfolder pays for
+  itself. mock-erp/ and contracts/ stay where they are (folders by role).
+  Rejected in 4.5: a top-level erp/ with the mock nested inside (Felix's
+  proposal), because it splits our application over two folders and mixes
+  it with the stand-in.
+
 - `other` used as a hedge (E-16, E-17): sharpen prose, remove the enum value,
   or require a justification field. After 3.6. Seen in 3.7: E-16 adds `other` in 3
   of 10 runs; E-17 answers `other` instead of `complaint` in 2 of 10.
@@ -868,7 +893,7 @@ The others wait for the larger golden set (Module 6 onward).
 
 ## Golden set (Module 3.3)
 
-- 22 cases in src/golden/cases.ts, labelled from docs/POLICY.md alone.
+- 22 cases in evals/golden/cases.ts, labelled from docs/POLICY.md alone.
 - Second annotator: Gemini in AI Studio (model gemini-pro-latest, which
   pointed to gemini-3.1-pro-preview at the time; thinking level high), fresh
   session, given only POLICY.md (v1.2), LABELLING.md and the email texts.
@@ -882,7 +907,7 @@ The others wait for the larger golden set (Module 6 onward).
   POLICY.md and LABELLING.md were attached as files) and
   docs/second-annotator-3.3-answer.json (Gemini's answer, saved by AI Studio
   as "ai_studio_code (1).txt"). Checked 08.10.2026: the 22 texts are
-  identical to src/golden/cases.ts, and the answer agrees with today's labels
+  identical to evals/golden/cases.ts, and the answer agrees with today's labels
   in 154/154 field comparisons (requestedAction present vs null), because all
   six differences below were resolved toward its reading. Records only:
   nothing reads them, and they never become prompt material (golden texts

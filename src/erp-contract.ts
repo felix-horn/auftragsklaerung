@@ -3,13 +3,13 @@ import {
   FindCustomerByEmail200Response,
   GetOrder200Response,
   GetOrder404Response,
-} from "./generated/erp-openapi.js";
+} from "./generated/erp-api.js";
 
 // The ERP's contract, under the names our code uses. The ERP team owns it:
-// its source is their OpenAPI document, contracts/erp-openapi.json. orval
-// generates the Zod schemas from it into src/generated/erp-openapi.ts
+// its source is their OpenAPI document, contracts/erp-api.json. orval
+// generates the Zod schemas from it into src/generated/erp-api.ts
 // (npm run erp:generate). Neither file is edited by hand: a new document
-// from the ERP team replaces contracts/erp-openapi.json as a whole, then
+// from the ERP team replaces contracts/erp-api.json as a whole, then
 // the schemas are generated again.
 //
 // The document describes an order as one object for every status: it does

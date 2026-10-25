@@ -10,7 +10,7 @@ import type { ErpData } from "./data-schema.js";
 import { createMockErp } from "./server.js";
 
 // The mock ERP's answers against the ERP's contract: for every answer the
-// OpenAPI document lists (contracts/erp-openapi.json), the mock must send
+// OpenAPI document lists (contracts/erp-api.json), the mock must send
 // that status, JSON, and a body the generated Zod schema accepts. A real
 // HTTP connection on this machine, no network beyond it, no API call.
 //

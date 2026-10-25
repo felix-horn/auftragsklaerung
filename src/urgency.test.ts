@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { goldenCases } from "./golden/cases.js";
+import { goldenCases } from "../evals/golden/cases.js";
 import { deriveUrgency } from "./urgency.js";
 
 // Every labelled golden case: the labelled signals and deadline must give the

@@ -8,7 +8,7 @@ import type { Customer, Order } from "./erp-contract.js";
 /**
  * R-14: the sender address in lower case, because upper and lower case
  * don't matter. The ERP stores contact addresses in lower case and compares
- * them exactly (contracts/erp-openapi.json, GET /customers).
+ * them exactly (contracts/erp-api.json, GET /customers).
  *
  * Expects the bare address ("m.weber@alpha.example"), not a header with a
  * display name ("Max Weber <m.weber@alpha.example>").

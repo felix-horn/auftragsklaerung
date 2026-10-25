@@ -35,10 +35,10 @@ export default defineConfig({
   // The ERP team's document (Module 4.5). src/erp-contract.ts gives the
   // generated schemas the names our code uses.
   erp: {
-    input: { target: "./contracts/erp-openapi.json" },
+    input: { target: "./contracts/erp-api.json" },
     output: {
       mode: "single",
-      target: "./src/generated/erp-openapi.ts",
+      target: "./src/generated/erp-api.ts",
       client: "zod",
       override: { zod: { generateEachHttpStatus: true } },
     },

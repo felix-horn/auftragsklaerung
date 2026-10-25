@@ -2,7 +2,7 @@ import "dotenv/config";
 import { NoObjectGeneratedError, NoOutputGeneratedError } from "ai";
 import { extractEmail } from "./extract.js";
 import { deriveUrgency } from "./urgency.js";
-import { goldenCases } from "./golden/cases.js";
+import { goldenCases } from "../evals/golden/cases.js";
 
 let failures = 0;
 

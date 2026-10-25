@@ -1,4 +1,4 @@
-import type { EmailExtraction } from "../schema.js";
+import type { EmailExtraction } from "../../src/schema.js";
 
 // Helpers that compare a model output with a golden label. Used by the eval
 // (3.6), never by the pipeline itself.

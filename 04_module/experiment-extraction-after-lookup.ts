@@ -18,7 +18,7 @@ import { generateText, isStepCount, Output, tool } from "ai";
 import { z } from "zod";
 import { DEFAULT_SYSTEM } from "../src/extract.js";
 import { emailExtractionSchema } from "../src/schema.js";
-import { goldenCases } from "../src/golden/cases.js";
+import { goldenCases } from "../evals/golden/cases.js";
 import { loggingFetch } from "./logging-fetch.js";
 
 const e06 = goldenCases.find((c) => c.id === "E-06")!;

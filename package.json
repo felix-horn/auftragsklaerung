@@ -11,7 +11,7 @@
     "eval:gate": "tsx evals/gate-cli.ts",
     "eval:report": "tsx evals/report.ts",
     "extract": "tsx src/run.ts",
-    "golden:check": "tsx src/golden/check.ts",
+    "golden:check": "tsx evals/golden/check.ts",
     "test": "vitest run"
   },
   "keywords": [],

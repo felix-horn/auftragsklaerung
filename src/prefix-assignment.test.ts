@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { goldenCases } from "./golden/cases.js";
+import { goldenCases } from "../evals/golden/cases.js";
 import { assignIdentifiersByPrefix } from "./prefix-assignment.js";
 
 // Part 1: invented numbers, shaped like R-09's examples. None is copied from
