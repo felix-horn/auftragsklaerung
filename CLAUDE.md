@@ -185,8 +185,9 @@ fake fetch (no API), or in a real run of a 04_module/ script.
   never edited by hand, committed, and checked by CI against a fresh
   generation.
 - mock-erp/ stands in for an outside system (Module 4.3): neither pipeline nor
-  eval code. It imports the contract from src/erp-contract.ts; nothing in src/
-  imports mock-erp/.
+  eval code. It imports the contract from src/erp-contract.ts. Pipeline code
+  in src/ never imports mock-erp/; tests may start it as the stand-in ERP
+  (src/erp-client.test.ts, 4.5).
 - Everything promptfoo loads lives in evals/ (config, providers/, assertions/,
   golden-tests.ts, which loads golden/); nothing in src/ imports promptfoo. evals/report.ts,
   evals/gate.ts, evals/gate-cli.ts and evals/baseline/ live there too but are not
@@ -322,6 +323,9 @@ fake fetch (no API), or in a real run of a 04_module/ script.
 - `npm run erp` — the mock ERP on 127.0.0.1:4100 until Ctrl+C (see Mock ERP
   (Module 4.3)); no API call. Try
   `curl -s -w "\n%{http_code}\n" http://127.0.0.1:4100/orders/A-44821`.
+- `npm run erp:generate` — orval regenerates src/generated/erp-api.ts from
+  contracts/erp-api.json (see ERP contract (Module 4.5)); no API call. CI
+  runs it too and fails if the result differs from the commit.
 
 ## Eval comparison (Module 3.4)
 
@@ -621,7 +625,9 @@ built from 4.3 on.
   its own process, serving one JSON file of invented customers (with contact
   addresses) and orders. The seed holds what the end-to-end cases need (see
   Mock ERP (Module 4.3)). Zod schemas in src/ are the contract: the mock validates its data with them
-  on load, our client validates every response with them. Base URL from
+  on load, our client validates every response with them. Since 4.5 they
+  are generated from the ERP's OpenAPI document (ERP contract (Module 4.5)).
+  Base URL from
   `ERP_BASE_URL` in .env. Errors: 404 for an unknown order or address, and
   "not reachable"; both map to R-16 outcomes. "Today" for R-17 is passed in,
   never read inside the stage. Not Next.js: Next.js practice comes in Module
@@ -629,8 +635,9 @@ built from 4.3 on.
 - Taken from Felix's mock backend of an earlier work project (DKLB), scaled
   down: base URL from env, a seed with problem cases, one contract shared by
   mock and client, deterministic time. Not taken, because nothing in Module 4
-  writes data or lets a model call tools: OpenAPI with generated client and
-  server types, monorepo, handler registry, stateful database, per-case
+  writes data or lets a model call tools: a generated client and generated
+  server types (4.5 took the OpenAPI document as the contract's source and
+  generates Zod schemas from it, not a client), monorepo, handler registry, stateful database, per-case
   database IDs, management endpoint, tool definitions derived from the spec
   (the last one fits Module 13's MCP server).
 - A lookup is built in the module that builds the step consuming its result.
@@ -672,12 +679,14 @@ Stands in for the company's ERP. Built in 4.3; our ERP client calls it from
 4.5 on. Every fact below was checked in a scratch copy (Node 24.21.0, zod
 4.5.4) or on Felix's Mac.
 
-- Files: src/erp-contract.ts (the contract: Zod schemas for a customer, an
-  order and the data file; imported by the mock and, from 4.5, by the client;
-  10 tests in src/erp-contract.test.ts with invented records);
-  mock-erp/data.json (the seed); mock-erp/data.test.ts (the seed against the
-  contract, so `npm test` and CI catch a broken seed without starting the
-  server); mock-erp/server.ts (`createMockErp(data)`, routes only, so tests can
+- Files (as of 4.5): src/erp-contract.ts (the contract under our names,
+  generated from contracts/erp-api.json since 4.5; see ERP contract (Module
+  4.5)); mock-erp/data-schema.ts (the seed file's rules: the contract plus
+  lower-case addresses and nothing twice; 9 tests in data-schema.test.ts,
+  moved from src/erp-contract.test.ts in 4.5); mock-erp/data.json (the
+  seed); mock-erp/data.test.ts (the seed against data-schema.ts, so
+  `npm test` and CI catch a broken seed without starting the server);
+  mock-erp/server.test.ts (the mock's answers against the contract, 4.5); mock-erp/server.ts (`createMockErp(data)`, routes only, so tests can
   start it with data of their own); mock-erp/main.ts (`npm run erp`: checks
   data.json, refuses to start on a violation with exit code 1, listens on
   127.0.0.1:4100).
@@ -687,8 +696,9 @@ Stands in for the company's ERP. Built in 4.3; our ERP client calls it from
   - `GET /orders/<orderNumber>` → 200 the order; 404 `no order with this
     number`.
   - Anything else → 404 `no such endpoint`. The different 404 texts let the
-    client tell a missing record from a wrong base URL; whether it reads them
-    is decided in 4.5.
+    client tell a missing record from a wrong base URL. Since 4.5 the
+    OpenAPI document allows exactly one text per documented 404, so the
+    client reads them through the generated Zod schemas.
   One record or 404, not a list: the contract allows at most one customer per
   address.
 - No business rule in the mock: it answers like an ERP to our service
@@ -702,11 +712,14 @@ Stands in for the company's ERP. Built in 4.3; our ERP client calls it from
   rule that uses them); `promisedDeliveryDate` may be null (R-17: "einen
   zugesagten Liefertermin hat"); an address belongs to at most one customer
   (POLICY.md v1.5, Bekannte Lücken).
-- Contract, method: one order shape per status (discriminated union: in
+- Contract, method (4.3): one order shape per status (discriminated union: in
   progress has `shippedOn: null`, shipped and delivered have a date); dates
   `YYYY-MM-DD`; addresses in lower case; numbers in R-09's format; no
   customer number, address or order number twice; a field only where a rule
-  uses it (no names, no order items).
+  uses it (no names, no order items). Changed in 4.5: the OpenAPI document
+  describes one flat order (status and shippedOn are not tied), and lower
+  case and "nothing twice" are rules of the seed file only
+  (mock-erp/data-schema.ts).
 - Seed: K-51320 (einkauf@ and l.vogt@kessler-fluidtechnik.example) owns
   A-44821 (in progress, promised 2026-11-06) and A-44100 (delivered, shipped
   2026-10-07). K-58047 (bestellung@wendt-maschinenbau.example) has no
@@ -738,6 +751,59 @@ Stands in for the company's ERP. Built in 4.3; our ERP client calls it from
   port exits with code 7 and prints no status. In zsh, a URL with `?` must be
   quoted (plain zsh: "no matches found").
 
+## ERP contract (Module 4.5)
+
+The ERP team owns the contract. Its source is their OpenAPI document,
+contracts/erp-api.json (OpenAPI 3.1, invented in the style springdoc-openapi
+generates; version 1.1.0). Checked in a scratch copy with Node 24.21.0,
+TypeScript 7.0.2, zod 4.5.4, orval 8.44.0.
+
+- Chain: contracts/erp-api.json → orval (orval.config.ts, `npm run
+  erp:generate`) → src/generated/erp-api.ts (Zod schemas, orval's names:
+  operationId plus status code, e.g. GetOrder200Response) →
+  src/erp-contract.ts (our names: customerSchema, orderSchema,
+  customerNotFoundSchema, orderNotFoundSchema, missingEmailSchema; types
+  Customer, Order). Only erp-contract.ts knows orval's names.
+- What becomes a check: `pattern` (.regex), `format: date` (z.iso.date()),
+  `format: email`, `enum`, `type: ["string", "null"]` (.nullable()),
+  `required`. What doesn't: `description` (.describe() text only),
+  `example`, `servers`, `tags`, `summary` (a JSDoc line).
+- Each documented 404 has its own schema whose `error` allows exactly one
+  text (CustomerNotFoundResponse, OrderNotFoundResponse), so the generated
+  404 schemas tell a missing record from any other 404 (wrong base URL,
+  another server's error page).
+- Generator: orval, chosen in 4.5 after testing the candidates against
+  TypeScript 7.0.2 and zod 4.5.4 (@hey-api/openapi-ts crashes on TypeScript 7,
+  openapi-typescript refuses its peer range, openapi-zod-client writes Zod 3,
+  typed-openapi disables type checking on its output, kubb needs more setup).
+  The switch to hey-api, once it supports TypeScript 7, is a TODO in
+  orval.config.ts.
+- Checks: mock-erp/server.test.ts (every documented answer of the mock
+  against the generated schemas); CI step "Generated code matches
+  contracts/" (regenerates and fails on any difference in src/generated/).
+
+When the ERP team sends a new version of the document:
+
+1. Replace contracts/erp-api.json with it as a whole; never edit it by
+   hand. Its `info.version` names the version.
+2. `npm run erp:generate`, then `git diff src/generated/`: that diff is the
+   change in Zod terms. Read it before anything else.
+3. `npx tsc --noEmit`. A renamed operation or status code changes orval's
+   names: fix the imports in src/erp-contract.ts first, nowhere else. A
+   renamed or removed field then shows up in the code that uses Customer or
+   Order.
+4. Decide what the diff means beyond compiling. A new field is ignored until
+   a step uses it. A new enum value (e.g. an order status) or a field that
+   may now be null can need a rule: if it changes what the clerk sees, it is
+   a POLICY.md question for Felix before any code.
+5. `npm test`. A failing mock-erp/server.test.ts means the mock no longer
+   answers as the document says: fix mock-erp/server.ts. A failing
+   mock-erp/data.test.ts means the seed has to follow: fix
+   mock-erp/data.json. A failing src/erp-client.test.ts means the client's
+   reading of the answers changed.
+6. Commit the document, the generated file and every fix together, so
+   one commit is one contract version. CI then runs the generation check.
+
 ## ERP stage rules (Module 4.4)
 
 POLICY.md R-14 to R-16 (v1.7) in src/erp-stage.ts, tested in
@@ -767,10 +833,10 @@ A-10001 to A-10003). No API call, no server.
   the extraction listed them, the number as extracted).
 - `runErpStage(input, erp)`: sender first; for unknown_sender and
   unreachable nothing else is asked. Order lookups run concurrently
-  (`Promise.all`), the results keep the recorded order; one unreachable
-  lookup doesn't affect the others; the same number recorded twice is
-  looked up twice (nothing merged). The input has no customer numbers, so
-  they can't assign the sender (R-14).
+  (`Promise.all`), the results keep the order the extraction listed them;
+  one unreachable lookup doesn't affect the others; the same number
+  extracted twice is looked up twice (nothing merged). The input has no
+  customer numbers, so they can't assign the sender (R-14).
 - The ERP is passed in (`Erp` interface, two functions). `ERP_BASE_URL`
   (4.5) picks which server the HTTP client talks to; the parameter picks
   HTTP client or in-memory fake. Rejected: a module-level client imported
@@ -789,6 +855,11 @@ A-10001 to A-10003). No API call, no server.
   R-15, lower-case prefix or missing hyphen is looked up, a space stays
   invalid; v1.7 R-14, ERP unreachable at the sender lookup records
   „Auftragsbestand nicht erreichbar.“ (not „keinem Kunden zugeordnet“).
+- Renamed by Felix on 26.10.2026 (no behaviour change): decideOrderOutcome
+  → revealOrderOnlyToOwner, ErpAnswer's `record` → `erpRecord`,
+  OrderLookup's `recorded` → `extractedOrderNumber`, erpDataSchema and
+  ErpData → mockErpDataSchema and MockErpData. Commits and handovers
+  before that date use the old names.
 
 ## Open experiments
 

@@ -2,7 +2,8 @@ import { defineConfig } from "orval";
 
 // Zod schemas from the OpenAPI documents of outside systems (contracts/),
 // written to src/generated/. Run: npm run erp:generate. The generated files
-// are committed; never edit them by hand.
+// are committed; never edit them by hand. When the ERP team sends a new
+// document: CLAUDE.md, ERP contract (Module 4.5), the numbered steps.
 //
 // TODO(when @hey-api/openapi-ts supports TypeScript 7): switch the Zod
 // generation from orval to hey-api. hey-api keeps the component names of
