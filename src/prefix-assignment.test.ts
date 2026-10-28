@@ -81,11 +81,11 @@ test("the same number in both lists ends up twice: nothing is merged", () => {
 // Part 2: the golden labels already follow R-09, so the function must leave
 // every one of them unchanged.
 
-for (const c of goldenCases) {
-  const labels = c.labels;
+for (const goldenCase of goldenCases) {
+  const labels = goldenCase.labels;
   if (labels === null) continue;
 
-  test(`${c.id}: labelled numbers are already where their prefix says`, () => {
+  test(`${goldenCase.id}: labelled numbers are already where their prefix says`, () => {
     expect(assignIdentifiersByPrefix(labels)).toEqual({
       orderNumbers: labels.orderNumbers,
       customerNumbers: labels.customerNumbers,

@@ -82,12 +82,13 @@ test("known limit: added words are accepted, even when they change the meaning",
 // Part 2: the golden deadlines, imported from cases.ts and varied in code.
 
 const goldenDeadlines: { id: string; email: string; label: string }[] = [];
-for (const c of goldenCases) {
-  if (c.labels === null || c.labels.deadlineStated === null) continue;
+for (const goldenCase of goldenCases) {
+  if (goldenCase.labels === null || goldenCase.labels.deadlineStated === null)
+    continue;
   goldenDeadlines.push({
-    id: c.id,
-    email: c.email,
-    label: c.labels.deadlineStated,
+    id: goldenCase.id,
+    email: goldenCase.email,
+    label: goldenCase.labels.deadlineStated,
   });
 }
 
@@ -108,12 +109,13 @@ for (const { id, email, label } of goldenDeadlines) {
 }
 
 test("no golden deadline matches another one", () => {
-  for (const a of goldenDeadlines) {
-    for (const b of goldenDeadlines) {
-      if (a.id === b.id) continue;
-      expect(isDeadlineQuoteMatch(a.label, b.label), `${a.id} vs ${b.id}`).toBe(
-        false,
-      );
+  for (const first of goldenDeadlines) {
+    for (const second of goldenDeadlines) {
+      if (first.id === second.id) continue;
+      expect(
+        isDeadlineQuoteMatch(first.label, second.label),
+        `${first.id} vs ${second.id}`,
+      ).toBe(false);
     }
   }
 });

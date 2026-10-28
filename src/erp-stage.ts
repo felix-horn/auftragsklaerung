@@ -23,18 +23,20 @@ export function normaliseSenderAddress(senderAddress: string): string {
 const LOOKUP_FORM = /^([Aa]-?)?\d{5}$/;
 
 /**
- * R-15: the number to look up for one recorded order number, or null if it
+ * R-15: the number to look up for one extracted order number, or null if it
  * is not a valid order number (R-16: „Keine gültige Auftragsnummer.“).
  * Every number in LOOKUP_FORM is looked up as "A-" plus its five digits.
  *
  * Limit: five digits without prefix are looked up even when the extraction
- * should not have recorded them (R-09, Stufe 3 instead of Stufe 2). Telling
+ * should not have extracted them (R-09, Stufe 3 instead of Stufe 2). Telling
  * the two apart needs the words around the number, which only the model
  * sees.
  */
-export function normaliseOrderNumber(recorded: string): string | null {
-  if (!LOOKUP_FORM.test(recorded)) return null;
-  return `A-${recorded.slice(-5)}`;
+export function normaliseOrderNumber(
+  extractedOrderNumber: string,
+): string | null {
+  if (!LOOKUP_FORM.test(extractedOrderNumber)) return null;
+  return `A-${extractedOrderNumber.slice(-5)}`;
 }
 
 // What the ERP answered to one lookup. "unreachable" stands for every way
@@ -42,7 +44,7 @@ export function normaliseOrderNumber(recorded: string): string | null {
 // outcome of its own.
 // TODO(Module 4.5): the HTTP client decides which failures are "unreachable".
 export type ErpAnswer<T> =
-  | { kind: "found"; record: T }
+  | { kind: "found"; erpRecord: T }
   | { kind: "not_found" }
   | { kind: "unreachable" };
 
@@ -62,15 +64,16 @@ export type OrderOutcome =
  * Another customer's order and a missing order give the same outcome, so
  * that no answer reveals which order numbers exist.
  */
-export function decideOrderOutcome(
-  askingCustomer: string,
+export function revealOrderOnlyToOwner(
+  askingCustomerNumber: string,
   answer: ErpAnswer<Order>,
 ): OrderOutcome {
   switch (answer.kind) {
     case "found": {
-      const isOwnOrder = answer.record.customerNumber === askingCustomer;
+      const isOwnOrder =
+        answer.erpRecord.customerNumber === askingCustomerNumber;
       return isOwnOrder
-        ? { kind: "order", order: answer.record }
+        ? { kind: "order", order: answer.erpRecord }
         : { kind: "refused" };
     }
     case "not_found":
@@ -90,15 +93,18 @@ export interface Erp {
   getOrderStatus(orderNumber: string): Promise<ErpAnswer<Order>>;
 }
 
-// One recorded order number and its outcome. The number stays as the
-// extraction recorded it (R-15, R-02).
-export type OrderLookup = { recorded: string; outcome: OrderOutcome };
+// One extracted order number and its outcome. The number stays as the
+// extraction wrote it (R-15, R-02).
+export type OrderLookup = {
+  extractedOrderNumber: string;
+  outcome: OrderOutcome;
+};
 
 // The result of the ERP stage for one email. "unknown_sender" stands for
 // „Absender ist keinem Kunden zugeordnet.“ and "unreachable" for
 // „Auftragsbestand nicht erreichbar.“ (R-14); in both, nothing was looked
 // up. "assigned" names the asking customer and holds one outcome per
-// recorded order number, in the recorded order.
+// extracted order number, in the order the extraction listed them.
 export type ErpStageResult =
   | { kind: "unknown_sender" }
   | { kind: "unreachable" }
@@ -106,10 +112,10 @@ export type ErpStageResult =
 
 /**
  * The ERP stage (POLICY.md R-14 to R-16): finds the asking customer by the
- * sender address, then looks up every recorded order number and decides
+ * sender address, then looks up every extracted order number and decides
  * what may be shown.
  *
- * Takes only the sender address and the recorded order numbers. Customer
+ * Takes only the sender address and the extracted order numbers. Customer
  * numbers from the email are not an input, so they can't assign the sender
  * (R-14). Lookups that fail are outcomes, not exceptions.
  */
@@ -117,20 +123,32 @@ export async function runErpStage(
   input: { senderAddress: string; orderNumbers: string[] },
   erp: Erp,
 ): Promise<ErpStageResult> {
+  // An ErpAnswer<Customer>: found (with the customer as erpRecord),
+  // not_found or unreachable.
   const sender = await erp.findCustomerBySender(
     normaliseSenderAddress(input.senderAddress),
   );
   if (sender.kind === "not_found") return { kind: "unknown_sender" };
   if (sender.kind === "unreachable") return { kind: "unreachable" };
 
-  const customerNumber = sender.record.customerNumber;
+  const { customerNumber } = sender.erpRecord;
+
   const orders = await Promise.all(
-    input.orderNumbers.map(async (recorded): Promise<OrderLookup> => {
-      const orderNumber = normaliseOrderNumber(recorded);
-      if (orderNumber === null) return { recorded, outcome: { kind: "invalid" } };
-      const answer = await erp.getOrderStatus(orderNumber);
-      return { recorded, outcome: decideOrderOutcome(customerNumber, answer) };
-    }),
+    input.orderNumbers.map(
+      async (extractedOrderNumber): Promise<OrderLookup> => {
+        const normalisedOrderNumber =
+          normaliseOrderNumber(extractedOrderNumber);
+        if (normalisedOrderNumber === null) {
+          return { extractedOrderNumber, outcome: { kind: "invalid" } };
+        }
+
+        const answer = await erp.getOrderStatus(normalisedOrderNumber);
+        return {
+          extractedOrderNumber,
+          outcome: revealOrderOnlyToOwner(customerNumber, answer),
+        };
+      },
+    ),
   );
   return { kind: "assigned", customerNumber, orders };
 }

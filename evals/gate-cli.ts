@@ -57,15 +57,15 @@ if (verdict.outcome === "no verdict") {
 
 // The checks that decide come first, marked with ✗. The known failures
 // follow under their own heading, because they never change the result.
-const line = (marker: string, f: Finding) =>
-  `  ${marker} ${f.id}  ${f.check.padEnd(17)} right in ${f.baselineRight}/${f.baselineRuns} baseline runs: ${f.reason}`;
+const line = (marker: string, finding: Finding) =>
+  `  ${marker} ${finding.id}  ${finding.check.padEnd(17)} right in ${finding.baselineRight}/${finding.baselineRuns} baseline runs: ${finding.reason}`;
 
 if (verdict.outcome === "red") {
   console.log(
     `\nRED: ${verdict.regressions.length} check(s) wrong that were right in every baseline run.`,
   );
   console.log("These decide the result:");
-  for (const f of verdict.regressions) console.log(line("✗", f));
+  for (const finding of verdict.regressions) console.log(line("✗", finding));
   process.exitCode = 1;
 } else {
   console.log(
@@ -78,7 +78,7 @@ console.log(
 );
 console.log(
   verdict.known.length > 0
-    ? verdict.known.map((f) => line(" ", f)).join("\n")
+    ? verdict.known.map((finding) => line(" ", finding)).join("\n")
     : "  none",
 );
 

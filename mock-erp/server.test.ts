@@ -8,7 +8,7 @@ import {
   orderNotFoundSchema,
   orderSchema,
 } from "../src/erp-contract.js";
-import type { ErpData } from "./data-schema.js";
+import type { MockErpData } from "./data-schema.js";
 import { createMockErp } from "./server.js";
 
 // The mock ERP's answers against the ERP's contract: for every answer the
@@ -19,7 +19,7 @@ import { createMockErp } from "./server.js";
 // Invented records, the same invented customers as data-schema.test.ts.
 // None is copied from the golden set, from POLICY.md or from
 // mock-erp/data.json.
-const data: ErpData = {
+const data: MockErpData = {
   customers: [
     {
       customerNumber: "K-20001",

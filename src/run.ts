@@ -13,13 +13,13 @@ for (const { id, email } of goldenCases) {
     console.log("Returned `output` from `generateText`:", output);
     console.log("Returned `usage` from `generateText`:", usage);
     console.log("Derived urgency:", deriveUrgency(output));
-  } catch (err) {
+  } catch (error) {
     failures++;
-    if (NoObjectGeneratedError.isInstance(err)) {
+    if (NoObjectGeneratedError.isInstance(error)) {
       // model produced something, but it failed Zod validation against your schema
-      console.error("Schema validation failed. Raw text:", err.text);
-      console.error("Cause:", err.cause);
-    } else if (NoOutputGeneratedError.isInstance(err)) {
+      console.error("Schema validation failed. Raw text:", error.text);
+      console.error("Cause:", error.cause);
+    } else if (NoOutputGeneratedError.isInstance(error)) {
       // model finished for a reason other than a normal stop (e.g. it tried to call a tool instead)
       console.error("No structured output was produced at all.");
     }

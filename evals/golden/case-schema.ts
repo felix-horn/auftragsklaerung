@@ -52,27 +52,33 @@ export const goldenCaseSchema = z
       .partialRecord(goldenLabelsSchema.keyof(), z.string().min(1))
       .optional(),
   })
-  .refine((c) => (c.labels === null) === (c.policyVersion === null), {
-    error: "labels and policyVersion are set together",
-    path: ["policyVersion"],
-  })
+  .refine(
+    (goldenCase) =>
+      (goldenCase.labels === null) === (goldenCase.policyVersion === null),
+    {
+      error: "labels and policyVersion are set together",
+      path: ["policyVersion"],
+    },
+  )
   // R-02: order/customer numbers and deadlines are recorded in the wording of the email,
   // so every such value has to occur in the email text.
-  .superRefine((c, ctx) => {
-    if (c.labels === null) return;
+  .superRefine((goldenCase, context) => {
+    if (goldenCase.labels === null) return;
     const verbatim = [
-      ["orderNumbers", c.labels.orderNumbers],
-      ["customerNumbers", c.labels.customerNumbers],
+      ["orderNumbers", goldenCase.labels.orderNumbers],
+      ["customerNumbers", goldenCase.labels.customerNumbers],
       [
         "deadlineStated",
-        c.labels.deadlineStated === null ? [] : [c.labels.deadlineStated],
+        goldenCase.labels.deadlineStated === null
+          ? []
+          : [goldenCase.labels.deadlineStated],
       ],
     ] as const;
 
     for (const [field, values] of verbatim) {
       values.forEach((value, index) => {
-        if (c.email.includes(value)) return;
-        ctx.addIssue({
+        if (goldenCase.email.includes(value)) return;
+        context.addIssue({
           code: "custom",
           message: `"${value}" does not occur in the email (R-02)`,
           path:
@@ -99,7 +105,7 @@ export function validateGoldenSet(rawCases: GoldenCaseInput[]): GoldenCase[] {
     else problems.push(`${rawCase.id}:\n${z.prettifyError(result.error)}`);
   }
 
-  const ids = rawCases.map((c) => c.id);
+  const ids = rawCases.map((rawCase) => rawCase.id);
   if (!hasNoDuplicates(ids)) problems.push("duplicate id");
 
   if (problems.length > 0) {

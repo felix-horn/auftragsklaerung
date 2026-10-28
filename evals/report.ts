@@ -62,7 +62,7 @@ const data = parsed.data;
 
 // The rule from CLAUDE.md (Eval assertions): numbers only from an eval
 // without ERRORs. An ERROR has no answer, so its checks have no results.
-const errors = data.results.results.filter((r) => r.failureReason === 2);
+const errors = data.results.results.filter((result) => result.failureReason === 2);
 if (errors.length > 0) {
   console.error(
     `${data.evalId} has ${errors.length} ERROR(s). Re-run the whole eval.`,
@@ -73,10 +73,10 @@ if (errors.length > 0) {
 // promptfoo numbers the results (testIdx) so that the repeats of one email
 // follow each other: E-01 run 1 … run 10, then E-02 run 1 … run 10, …
 // Sorted by testIdx, each email's results are therefore in run order.
-const sorted = [...data.results.results].sort((a, b) => a.testIdx - b.testIdx);
-const ids = [...new Set(sorted.map((r) => r.testCase.description))].sort();
+const sorted = [...data.results.results].sort((first, second) => first.testIdx - second.testIdx);
+const ids = [...new Set(sorted.map((result) => result.testCase.description))].sort();
 const runsOf = (id: string) =>
-  sorted.filter((r) => r.testCase.description === id);
+  sorted.filter((result) => result.testCase.description === id);
 const runs = runsOf(ids[0]).length;
 for (const id of ids) {
   if (runsOf(id).length !== runs) {
@@ -109,23 +109,28 @@ function answerSeen(check: string, reason: string): string {
   return seen;
 }
 
-function checkResult(r: Result, check: string) {
-  const c = r.gradingResult?.componentResults.find(
-    (c) => c.assertion.metric === check,
+function checkResult(result: Result, check: string) {
+  const storedComponent = result.gradingResult?.componentResults.find(
+    (component) => component.assertion.metric === check,
   );
-  if (!c) {
-    throw new Error(`${r.testCase.description}: no stored result for ${check}`);
+  if (!storedComponent) {
+    throw new Error(
+      `${result.testCase.description}: no stored result for ${check}`,
+    );
   }
-  return { pass: c.pass, seen: answerSeen(check, c.reason) };
+  return {
+    pass: storedComponent.pass,
+    seen: answerSeen(check, storedComponent.reason),
+  };
 }
 
 // ["[] 6×", …]: each different answer with how often it came, most often first.
 function tally(values: string[]): string {
   const counts = new Map<string, number>();
-  for (const v of values) counts.set(v, (counts.get(v) ?? 0) + 1);
+  for (const value of values) counts.set(value, (counts.get(value) ?? 0) + 1);
   return [...counts]
-    .sort((a, b) => b[1] - a[1])
-    .map(([v, n]) => `${v} ${n}×`)
+    .sort(([, firstCount], [, secondCount]) => secondCount - firstCount)
+    .map(([answer, count]) => `${answer} ${count}×`)
     .join(", ");
 }
 
@@ -137,9 +142,9 @@ const never: string[] = [];
 let always = 0;
 for (const id of ids) {
   for (const check of checks) {
-    const results = runsOf(id).map((r) => checkResult(r, check));
-    const right = results.filter((r) => r.pass).length;
-    const line = `${id}  ${check.padEnd(17)} ${String(right).padStart(2)}/${runs}  ${tally(results.map((r) => r.seen))}`;
+    const results = runsOf(id).map((result) => checkResult(result, check));
+    const right = results.filter((result) => result.pass).length;
+    const line = `${id}  ${check.padEnd(17)} ${String(right).padStart(2)}/${runs}  ${tally(results.map((result) => result.seen))}`;
     if (right === runs) always++;
     else if (right === 0) never.push(line);
     else sometimes.push(line);
@@ -154,28 +159,28 @@ console.log(
 );
 
 // 2. Totals per run: run k is the k-th result of every email.
-const cell = (v: number) => String(v).padStart(4);
+const cell = (value: number) => String(value).padStart(4);
 const label = (text: string) => text.padEnd(18);
-const perRun = Array.from({ length: runs }, (_, k) => {
-  const results = ids.map((id) => runsOf(id)[k]);
+const perRun = Array.from({ length: runs }, (_, runIndex) => {
+  const results = ids.map((id) => runsOf(id)[runIndex]);
   const fieldsRight = results
-    .flatMap((r) => fields.map((f) => checkResult(r, f).pass))
+    .flatMap((result) => fields.map((field) => checkResult(result, field).pass))
     .filter(Boolean).length;
-  const emailsRight = results.filter((r) => r.failureReason === 0).length;
+  const emailsRight = results.filter((result) => result.failureReason === 0).length;
   return { fieldsRight, emailsRight };
 });
-console.log(`${label("run")}${perRun.map((_, k) => cell(k + 1)).join("")}`);
+console.log(`${label("run")}${perRun.map((_, runIndex) => cell(runIndex + 1)).join("")}`);
 console.log(
-  `${label(`fields right/${ids.length * fields.length}`)}${perRun.map((r) => cell(r.fieldsRight)).join("")}`,
+  `${label(`fields right/${ids.length * fields.length}`)}${perRun.map((totals) => cell(totals.fieldsRight)).join("")}`,
 );
 console.log(
-  `${label(`emails right/${ids.length}`)}${perRun.map((r) => cell(r.emailsRight)).join("")}`,
+  `${label(`emails right/${ids.length}`)}${perRun.map((totals) => cell(totals.emailsRight)).join("")}`,
 );
 
 // All runs together: must equal the boxes in promptfoo view.
 console.log("\nAll runs together (compare with the boxes in the view):");
 for (const check of checks) {
-  const right = sorted.filter((r) => checkResult(r, check).pass).length;
+  const right = sorted.filter((result) => checkResult(result, check).pass).length;
   console.log(`  ${check.padEnd(17)} ${right}/${sorted.length}`);
 }
 
@@ -197,8 +202,8 @@ for (const id of ids) {
   const confidences = new Map<IntentType, number[]>(
     labelled.map((type) => [type, []]),
   );
-  for (const r of results) {
-    const answer = emailExtractionSchema.safeParse(r.response?.output);
+  for (const result of results) {
+    const answer = emailExtractionSchema.safeParse(result.response?.output);
     if (!answer.success) continue; // no valid extraction: no confidences
     for (const intent of answer.data.intents) {
       const seen = confidences.get(intent.type) ?? [];
@@ -216,7 +221,10 @@ for (const id of ids) {
 }
 const lowest = (row: IntentRow) =>
   row.confidences.length > 0 ? Math.min(...row.confidences) : -1;
-intentRows.sort((a, b) => lowest(a) - lowest(b) || a.id.localeCompare(b.id));
+intentRows.sort(
+  (first, second) =>
+    lowest(first) - lowest(second) || first.id.localeCompare(second.id),
+);
 
 console.log("\nIntents the model reported, lowest confidence first:");
 console.log("email intent             in label  reported  confidence");
@@ -246,7 +254,7 @@ for (const group of groups) {
   // One entry per report in this group, each carrying the row it came from.
   const reports = intentRows.flatMap((row) =>
     row.confidences
-      .filter((c) => c >= group.from && c < group.to)
+      .filter((confidence) => confidence >= group.from && confidence < group.to)
       .map(() => row),
   );
   const inLabel = reports.filter((row) => row.isInLabel).length;

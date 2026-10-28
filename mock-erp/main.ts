@@ -6,7 +6,7 @@
 
 import { readFileSync } from "node:fs";
 import { z } from "zod";
-import { erpDataSchema } from "./data-schema.js";
+import { mockErpDataSchema } from "./data-schema.js";
 import { createMockErp } from "./server.js";
 
 const PORT = 4100;
@@ -14,7 +14,7 @@ const PORT = 4100;
 // The file next to this one, wherever the repo lives (the path may contain
 // spaces).
 const dataFile = new URL("./data.json", import.meta.url);
-const result = erpDataSchema.safeParse(
+const result = mockErpDataSchema.safeParse(
   JSON.parse(readFileSync(dataFile, "utf8")),
 );
 

@@ -39,13 +39,13 @@ export type ExtractOptions = {
 // and NoOutputGeneratedError (there is no answer text to check at all).
 export async function extractEmail(
   emailText: string,
-  opts: ExtractOptions = {},
+  options: ExtractOptions = {},
 ) {
   const {
     system = DEFAULT_SYSTEM,
     model = "claude-sonnet-5",
     maxRetries = 2,
-  } = opts;
+  } = options;
   const { output, usage } = await generateText({
     model: anthropic(model),
     output: Output.object({ schema: emailExtractionSchema }),

@@ -21,7 +21,7 @@ import { emailExtractionSchema } from "../src/schema.js";
 import { goldenCases } from "../evals/golden/cases.js";
 import { loggingFetch } from "./logging-fetch.js";
 
-const e06 = goldenCases.find((c) => c.id === "E-06")!;
+const e06 = goldenCases.find((goldenCase) => goldenCase.id === "E-06")!;
 
 const anthropic = createAnthropic({ fetch: loggingFetch });
 
@@ -50,9 +50,9 @@ const result = await generateText({
 });
 
 console.log("--- verdict ---");
-result.steps.forEach((step, i) => {
+result.steps.forEach((step, index) => {
     console.log(
-        `request ${i + 1}: finishReason ${step.finishReason}, tool calls: ${step.toolCalls.length}, text: ${step.text.length} characters`,
+        `request ${index + 1}: finishReason ${step.finishReason}, tool calls: ${step.toolCalls.length}, text: ${step.text.length} characters`,
     );
 });
 // `output` is parsed from the last request's answer only, and only if that

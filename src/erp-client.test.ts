@@ -1,6 +1,6 @@
 import type { AddressInfo } from "node:net";
 import { afterAll, beforeAll, expect, test, vi } from "vitest";
-import type { ErpData } from "../mock-erp/data-schema.js";
+import type { MockErpData } from "../mock-erp/data-schema.js";
 import { createMockErp } from "../mock-erp/server.js";
 import { createErpClient } from "./erp-client.js";
 import { runErpStage } from "./erp-stage.js";
@@ -12,7 +12,7 @@ import { runErpStage } from "./erp-stage.js";
 // Invented records, the same invented customers as src/erp-stage.test.ts
 // (K-20001 at alpha.example, K-20002 at beta.example). None is copied from
 // the golden set, from POLICY.md or from mock-erp/data.json.
-const data: ErpData = {
+const data: MockErpData = {
   customers: [
     {
       customerNumber: "K-20001",
@@ -59,7 +59,7 @@ test("a registered address: found, with the customer", async () => {
   const erp = createErpClient(baseUrl);
   expect(await erp.findCustomerBySender("einkauf@alpha.example")).toEqual({
     kind: "found",
-    record: data.customers[0],
+    erpRecord: data.customers[0],
   });
 });
 
@@ -67,7 +67,7 @@ test("an address with a + is sent encoded and found", async () => {
   const erp = createErpClient(baseUrl);
   expect(await erp.findCustomerBySender("m.weber+erp@alpha.example")).toEqual({
     kind: "found",
-    record: data.customers[0],
+    erpRecord: data.customers[0],
   });
 });
 
@@ -82,13 +82,13 @@ test("an existing order: found, with the order, whoever owns it", async () => {
   const erp = createErpClient(baseUrl);
   expect(await erp.getOrderStatus("A-10001")).toEqual({
     kind: "found",
-    record: data.orders[0],
+    erpRecord: data.orders[0],
   });
   // The client doesn't decide who may see an order: R-16 is
-  // decideOrderOutcome's job.
+  // revealOrderOnlyToOwner's job.
   expect(await erp.getOrderStatus("A-10003")).toEqual({
     kind: "found",
-    record: data.orders[1],
+    erpRecord: data.orders[1],
   });
 });
 
@@ -119,10 +119,10 @@ test("runErpStage with the client: own order, another customer's, a missing one,
     kind: "assigned",
     customerNumber: "K-20001",
     orders: [
-      { recorded: "A-10001", outcome: { kind: "order", order: data.orders[0] } },
-      { recorded: "A-10003", outcome: { kind: "refused" } },
-      { recorded: "a99999", outcome: { kind: "refused" } },
-      { recorded: "K-20001", outcome: { kind: "invalid" } },
+      { extractedOrderNumber: "A-10001", outcome: { kind: "order", order: data.orders[0] } },
+      { extractedOrderNumber: "A-10003", outcome: { kind: "refused" } },
+      { extractedOrderNumber: "a99999", outcome: { kind: "refused" } },
+      { extractedOrderNumber: "K-20001", outcome: { kind: "invalid" } },
     ],
   });
 });

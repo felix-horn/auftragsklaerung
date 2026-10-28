@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { erpDataSchema } from "./data-schema.js";
+import { mockErpDataSchema } from "./data-schema.js";
 
 // Invented customers and orders. None is copied from the golden set or from
 // POLICY.md. Each test changes one thing in a fresh copy and expects exactly
@@ -39,10 +39,10 @@ function validData() {
   };
 }
 
-// Every problem erpDataSchema finds, as "where: what": the contract's own
+// Every problem mockErpDataSchema finds, as "where: what": the contract's own
 // checks plus the data file's rules (lower case, nothing twice).
 function problems(data: unknown): string[] {
-  const result = erpDataSchema.safeParse(data);
+  const result = mockErpDataSchema.safeParse(data);
   if (result.success) return [];
   return result.error.issues.map(
     (issue) => `${issue.path.join(".")}: ${issue.message}`,

@@ -4,7 +4,7 @@ import {
   type Server,
   type ServerResponse,
 } from "node:http";
-import type { ErpData } from "./data-schema.js";
+import type { MockErpData } from "./data-schema.js";
 
 // The mock ERP: answers like a company's order system would answer our
 // service account. It serves whatever it is given and checks nothing about
@@ -20,54 +20,58 @@ import type { ErpData } from "./data-schema.js";
 //
 // Started by mock-erp/main.ts (npm run erp). Exported as a function so that
 // tests can start it with data of their own.
-export function createMockErp(data: ErpData): Server {
-  return createServer((req, res) => {
-    const url = new URL(req.url ?? "/", "http://127.0.0.1");
+export function createMockErp(data: MockErpData): Server {
+  return createServer((request, response) => {
+    const url = new URL(request.url ?? "/", "http://127.0.0.1");
 
-    if (req.method === "GET" && url.pathname === "/customers") {
+    if (request.method === "GET" && url.pathname === "/customers") {
       const email = url.searchParams.get("email");
       if (!email) {
-        return respond(req, res, 400, {
+        return respond(request, response, 400, {
           error: "query parameter email is required",
         });
       }
       // Exact comparison: "L.Vogt@…" does not find "l.vogt@…".
-      const customer = data.customers.find((c) =>
-        c.contactEmails.includes(email),
+      const matchingCustomer = data.customers.find((customer) =>
+        customer.contactEmails.includes(email),
       );
-      if (!customer) {
-        return respond(req, res, 404, {
+      if (!matchingCustomer) {
+        return respond(request, response, 404, {
           error: "no customer with this contact address",
         });
       }
-      return respond(req, res, 200, customer);
+      return respond(request, response, 200, matchingCustomer);
     }
 
     // "/orders/A-44821" → "A-44821". Taken from the path as sent, without
     // percent-decoding: an order number has only letters, digits and "-".
     const orderPath = url.pathname.match(/^\/orders\/([^/]+)$/);
-    if (req.method === "GET" && orderPath) {
-      const order = data.orders.find((o) => o.orderNumber === orderPath[1]);
-      if (!order) {
-        return respond(req, res, 404, { error: "no order with this number" });
+    if (request.method === "GET" && orderPath) {
+      const requestedOrder = data.orders.find(
+        (order) => order.orderNumber === orderPath[1],
+      );
+      if (!requestedOrder) {
+        return respond(request, response, 404, {
+          error: "no order with this number",
+        });
       }
-      return respond(req, res, 200, order);
+      return respond(request, response, 200, requestedOrder);
     }
 
-    return respond(req, res, 404, { error: "no such endpoint" });
+    return respond(request, response, 404, { error: "no such endpoint" });
   });
 }
 
 // Sends status and JSON body, and prints one line per request to the
 // terminal the mock ERP runs in.
 function respond(
-  req: IncomingMessage,
-  res: ServerResponse,
+  request: IncomingMessage,
+  response: ServerResponse,
   status: number,
   body: unknown,
 ) {
-  console.log(`${req.method} ${req.url} → ${status}`);
-  res.statusCode = status;
-  res.setHeader("content-type", "application/json");
-  res.end(JSON.stringify(body));
+  console.log(`${request.method} ${request.url} → ${status}`);
+  response.statusCode = status;
+  response.setHeader("content-type", "application/json");
+  response.end(JSON.stringify(body));
 }

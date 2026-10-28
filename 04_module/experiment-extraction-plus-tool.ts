@@ -16,7 +16,7 @@ import { emailExtractionSchema } from "../src/schema.js";
 import { goldenCases } from "../evals/golden/cases.js";
 import { loggingFetch } from "./logging-fetch.js";
 
-const e06 = goldenCases.find((c) => c.id === "E-06")!;
+const e06 = goldenCases.find((goldenCase) => goldenCase.id === "E-06")!;
 
 // Today's seven fields plus nextAction, in this file only.
 const extractionWithNextAction = emailExtractionSchema.extend({

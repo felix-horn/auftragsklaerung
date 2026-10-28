@@ -40,8 +40,10 @@ export type ConfigResult =
  * Config. Prints nothing: an invalid environment comes back as text, one
  * line per problem, naming the variable.
  */
-export function parseConfig(env: Record<string, string | undefined>): ConfigResult {
-  const result = environmentSchema.safeParse(env);
+export function parseConfig(
+  environment: Record<string, string | undefined>,
+): ConfigResult {
+  const result = environmentSchema.safeParse(environment);
   if (!result.success) {
     return { kind: "invalid", problems: z.prettifyError(result.error) };
   }

@@ -11,8 +11,8 @@ const emails = {
 const labels = { intents: ["order_status"], orderNumbers: ["A-10001"] };
 
 // An export with `runs` runs of each invented email. `wrong` names the checks
-// that failed, per run: wrong[k] = ["E-91 intents"] makes E-91's intents
-// wrong in run k. "E-91 ERROR" makes that result an ERROR.
+// that failed, per run: wrong[runIndex] = ["E-91 intents"] makes E-91's intents
+// wrong in that run. "E-91 ERROR" makes that result an ERROR.
 function evalExport(
   evalId: string,
   runs: number,
@@ -21,14 +21,14 @@ function evalExport(
 ): EvalExport {
   const ids = Object.keys(emails) as (keyof typeof emails)[];
   const results = ids.flatMap((id, emailIndex) =>
-    Array.from({ length: runs }, (_, k) => {
-      const failing = wrong[k] ?? [];
+    Array.from({ length: runs }, (_, runIndex) => {
+      const failing = wrong[runIndex] ?? [];
       const testCase = {
         description: id,
         vars: { email: emails[id] },
         metadata: { labels: labelsOf[id] ?? labels },
       };
-      const testIdx = emailIndex * runs + k;
+      const testIdx = emailIndex * runs + runIndex;
       if (failing.includes(`${id} ERROR`)) {
         return { testIdx, failureReason: 2, error: "Overloaded", testCase };
       }
@@ -40,7 +40,7 @@ function evalExport(
           reason: hasPassed ? "got [], expected []" : 'got ["other"], expected []',
         };
       });
-      const failureReason = componentResults.every((c) => c.pass) ? 0 : 1;
+      const failureReason = componentResults.every((component) => component.pass) ? 0 : 1;
       return {
         testIdx,
         failureReason,
@@ -54,9 +54,9 @@ function evalExport(
 
 // A baseline of ten runs: E-91 intents wobbles (wrong in runs 3 and 7),
 // E-92 orderNumbers is wrong in every run, everything else is always right.
-const tenRuns = Array.from({ length: 10 }, (_, k) => [
+const tenRuns = Array.from({ length: 10 }, (_, runIndex) => [
   "E-92 orderNumbers",
-  ...(k === 3 || k === 7 ? ["E-91 intents"] : []),
+  ...(runIndex === 3 || runIndex === 7 ? ["E-91 intents"] : []),
 ]);
 const baseline = evalExport("baseline", 10, tenRuns);
 
@@ -72,7 +72,8 @@ test("green: a check wrong in some or all baseline runs is wrong", () => {
   if (verdict.outcome === "no verdict") return;
   expect(
     verdict.known.map(
-      (f) => `${f.id} ${f.check} ${f.baselineRight}/${f.baselineRuns}`,
+      (finding) =>
+        `${finding.id} ${finding.check} ${finding.baselineRight}/${finding.baselineRuns}`,
     ),
   ).toEqual(["E-91 intents 8/10", "E-92 orderNumbers 0/10"]);
 });

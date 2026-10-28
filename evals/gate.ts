@@ -77,7 +77,7 @@ export type Verdict =
 // so that the repeats of one email follow each other, as in report.ts.
 function byEmail(results: Result[]): Map<string, Result[]> {
   const emails = new Map<string, Result[]>();
-  const sorted = [...results].sort((a, b) => a.testIdx - b.testIdx);
+  const sorted = [...results].sort((first, second) => first.testIdx - second.testIdx);
   for (const result of sorted) {
     const id = result.testCase.description;
     emails.set(id, [...(emails.get(id) ?? []), result]);
@@ -87,7 +87,7 @@ function byEmail(results: Result[]): Map<string, Result[]> {
 
 function component(result: Result, check: string) {
   const found = result.gradingResult?.componentResults.find(
-    (c) => c.assertion.metric === check,
+    (storedComponent) => storedComponent.assertion.metric === check,
   );
   if (!found) {
     throw new Error(
@@ -103,12 +103,12 @@ const gradedAgainst = (result: Result) =>
 
 export function judge(baselines: EvalExport[], run: EvalExport): Verdict {
   // 1. An ERROR has no answer, so its checks have no results: no verdict.
-  const errors = [...baselines, run].flatMap((e) =>
-    e.results.results
-      .filter((r) => r.failureReason === 2)
+  const errors = [...baselines, run].flatMap((evalExport) =>
+    evalExport.results.results
+      .filter((result) => result.failureReason === 2)
       .map(
-        (r) =>
-          `${e.evalId}: ${r.testCase.description} is an ERROR (${r.error ?? "no message"})`,
+        (result) =>
+          `${evalExport.evalId}: ${result.testCase.description} is an ERROR (${result.error ?? "no message"})`,
       ),
   );
   if (errors.length > 0) return { outcome: "no verdict", reasons: errors };
@@ -140,7 +140,9 @@ export function judge(baselines: EvalExport[], run: EvalExport): Verdict {
       const runResult = runEmails.get(id)?.[0];
       if (
         runResult &&
-        results.some((r) => gradedAgainst(r) !== gradedAgainst(runResult))
+        results.some(
+          (result) => gradedAgainst(result) !== gradedAgainst(runResult),
+        )
       ) {
         reasons.push(
           `${baseline.evalId}: ${id} has a different email text or different labels than the eval run`,
@@ -158,7 +160,9 @@ export function judge(baselines: EvalExport[], run: EvalExport): Verdict {
       runsOf.set(id, (runsOf.get(id) ?? 0) + results.length);
       for (const check of checks) {
         const key = `${id} ${check}`;
-        const passes = results.filter((r) => component(r, check).pass).length;
+        const passes = results.filter(
+          (result) => component(result, check).pass,
+        ).length;
         right.set(key, (right.get(key) ?? 0) + passes);
       }
     }
@@ -171,14 +175,14 @@ export function judge(baselines: EvalExport[], run: EvalExport): Verdict {
   for (const id of ids) {
     const result = runEmails.get(id)![0];
     for (const check of checks) {
-      const c = component(result, check);
-      if (c.pass) continue;
+      const storedComponent = component(result, check);
+      if (storedComponent.pass) continue;
       const finding: Finding = {
         id,
         check,
         baselineRight: right.get(`${id} ${check}`) ?? 0,
         baselineRuns: runsOf.get(id) ?? 0,
-        reason: c.reason,
+        reason: storedComponent.reason,
       };
       if (finding.baselineRight === finding.baselineRuns)
         regressions.push(finding);

@@ -198,12 +198,22 @@ fake fetch (no API), or in a real run of a 04_module/ script.
   on hover. New and rewritten functions get one; older functions when they
   are next rewritten, not for a rename.
 - Functions are named with a verb (`normaliseOrderNumber`,
-  `decideOrderOutcome`, `runErpStage`), values with a noun. Older names
+  `revealOrderOnlyToOwner`, `runErpStage`), values with a noun. Older names
   change when the function is next rewritten.
 - Booleans start with `is` or `has`: variables, parameters, fields and
   functions that return one (`isOwnOrder`, `hasSameItems`,
   `isDeadlineQuoteMatch`). Names fixed by an outside format stay as they
   are (promptfoo's `pass`).
+- No abbreviations in names, callback parameters included: `request`,
+  `response`, `context`, `error`, `(order) => order.orderNumber`, never
+  `req`, `res`, `ctx`, `err` or `(o) => …`; `(first, second)` for a sort
+  comparator, `runIndex` or `index` for a counter. If the parameter's name
+  would shadow the variable being assigned, the variable says which item
+  it is: `const matchingCustomer = customers.find((customer) => …)`.
+  Allowed: established acronyms (ERP, URL, JSON, API, `id`), names fixed
+  by an outside format (promptfoo's `testIdx`, `process.env`) and
+  src/generated/. Applies to the whole repo (renamed 26.10.2026); no
+  linter checks it.
 - Pipeline functions return data and print nothing. Entry points decide what to
   show: run.ts prints, the promptfoo provider reports to promptfoo.
 - 04_module/ holds Module 4's teaching scripts and experiments. The 4.1 scripts
@@ -298,7 +308,7 @@ fake fetch (no API), or in a real run of a 04_module/ script.
   against every export in evals/baseline/. No API call. Exit code 0 green, 1 red,
   2 no verdict.
 - Every model answer of an export, indented (no API call):
-  `node -e 'const d=require(process.argv[1]); for (const r of d.results.results.sort((a,b)=>a.testIdx-b.testIdx)) console.log(r.testCase.description, JSON.stringify(r.response?.output, null, 2))' <export.json>`
+  `node -e 'const data=require(process.argv[1]); for (const result of data.results.results.sort((first,second)=>first.testIdx-second.testIdx)) console.log(result.testCase.description, JSON.stringify(result.response?.output, null, 2))' <export.json>`
 - `npx promptfoo view` — browser view of past runs: accuracy per field above the
   results, Display → Failures, details per case (Evaluation and Metadata tabs)
 - `PROMPTFOO_DISABLE_TELEMETRY=1 npx promptfoo export eval <eval id> -o <file>` —
@@ -746,15 +756,15 @@ A-10001 to A-10003). No API call, no server.
     bare digits are looked up whether R-09 Stufe 2 or Stufe 3; E-07's
     "78432" (recorded in 10/10 baseline runs) becomes a lookup of A-78432,
     E-21's "K-62418" (10/10) is invalid.
-  - `decideOrderOutcome(askingCustomer, answer)`: R-16. Another customer's
-    order and a missing one give the same `refused`.
-- Types: `ErpAnswer<T>` = found (record) / not_found / unreachable, a value,
+  - `revealOrderOnlyToOwner(askingCustomerNumber, answer)`: R-16. Another
+    customer's order and a missing one give the same `refused`.
+- Types: `ErpAnswer<T>` = found (erpRecord) / not_found / unreachable, a value,
   not an exception. `OrderOutcome` = order / refused / invalid /
   unreachable; only `order` carries data, the whole contract `Order`.
   `ErpStageResult` = unknown_sender / unreachable (R-14, v1.7: ERP down at
   the sender lookup; nothing looked up) / assigned (customerNumber plus one
-  `{ recorded, outcome }` per recorded number, in the recorded order, the
-  number as recorded).
+  `{ extractedOrderNumber, outcome }` per extracted number, in the order
+  the extraction listed them, the number as extracted).
 - `runErpStage(input, erp)`: sender first; for unknown_sender and
   unreachable nothing else is asked. Order lookups run concurrently
   (`Promise.all`), the results keep the recorded order; one unreachable
