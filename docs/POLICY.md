@@ -1,7 +1,7 @@
 # Auftragsklärung — Fachliche Regeln
 
-**Version:** v1.7
-**Stand:** 22.10.2026
+**Version:** v1.8
+**Stand:** 28.10.2026
 
 ## Zweck dieses Dokuments
 
@@ -545,6 +545,11 @@ Der Abgleich ändert nichts an dem, was aus der Nachricht festgehalten wurde
 (R-01). Seine Ergebnisse werden getrennt davon geführt, damit erkennbar
 bleibt, was der Kunde geschrieben hat und was aus dem Auftragsbestand stammt.
 
+Als nicht erreichbar gilt der Auftragsbestand auch, wenn er nicht
+rechtzeitig antwortet oder seine Antwort nicht in der vereinbarten Form
+vorliegt, etwa weil eine Angabe fehlt oder nicht lesbar ist. Aus einer
+solchen Antwort wird nichts festgehalten (R-14, R-16).
+
 ### R-14 — Wer anfragt, ergibt sich aus der Absenderadresse
 
 Eine Nachricht gilt als Anfrage eines Kunden, wenn ihre Absenderadresse im
@@ -650,6 +655,9 @@ Beispiele, der Absender ist K-30117 zugeordnet:
   Nummer für diesen Kunden.“
 - A-79999 gibt es nicht. — Dasselbe Ergebnis.
 - Festgehalten „7021“. — „Keine gültige Auftragsnummer.“
+- Der Auftragsbestand antwortet zu A-70214, aber ohne Status. —
+  „Auftragsbestand nicht erreichbar.“; vom Auftrag wird nichts festgehalten,
+  auch nicht der zugesagte Liefertermin, der in der Antwort stand.
 
 **Begründung:** Unterschiedliche Ergebnisse für „gibt es nicht“ und „gehört
 einem anderen Kunden“ verrieten, welche Auftragsnummern vergeben sind: wer
@@ -658,9 +666,13 @@ Die übrigen Ergebnisse verraten nichts über fremde Aufträge und führen den
 Bearbeiter zu unterschiedlichen Schritten: klären, wer schreibt (R-14); nach
 der richtigen Nummer fragen; nach einer Auftragsnummer fragen. Ein nicht
 erreichbarer Auftragsbestand ist keine Ablehnung; als Ablehnung festgehalten,
-sähe eine Störung aus wie eine falsche Nummer.
+sähe eine Störung aus wie eine falsche Nummer. Eine Antwort, die nicht in der
+vereinbarten Form vorliegt, ist für den Bearbeiter so wenig verwertbar wie
+keine: Teile davon festzuhalten hieße, unvollständige Angaben als Stand des
+Auftrags auszugeben. Der Bearbeiter verfährt in beiden Fällen gleich, der
+Abgleich wird wiederholt; deshalb dasselbe Ergebnis.
 
-**Seit:** v1.4
+**Seit:** v1.4, geändert in v1.8
 
 ### R-17 — Dringlichkeit nach dem Abgleich
 
@@ -783,3 +795,4 @@ Bewusst nicht geregelt, jeweils mit Begründung.
 | v1.5 | 20.10.2026 | Bekannte Lücken ergänzt: mehrfach hinterlegte Absenderadressen (R-14). Keine Bewertung betroffen. |
 | v1.6 | 21.10.2026 | R-15: Eine Auftragsnummer mit klein geschriebenem Präfix oder ohne Bindestrich wird als „A-“ mit fünf Ziffern abgefragt. Keine Bewertung betroffen. |
 | v1.7 | 22.10.2026 | R-14: Ist der Auftragsbestand bei der Zuordnung nicht erreichbar, wird „Auftragsbestand nicht erreichbar.“ festgehalten und nichts abgefragt. Keine Bewertung betroffen. |
+| v1.8 | 28.10.2026 | Abgleich mit dem Auftragsbestand: Als nicht erreichbar gilt der Auftragsbestand auch, wenn er nicht rechtzeitig antwortet oder seine Antwort nicht in der vereinbarten Form vorliegt; aus einer solchen Antwort wird nichts festgehalten (R-14, R-16). Beispiel und Begründung in R-16 ergänzt. Keine Bewertung betroffen. |
