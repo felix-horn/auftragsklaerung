@@ -5,12 +5,13 @@
   "main": "index.js",
   "scripts": {
     "dump": "tsx src/dump-body.ts",
+    "dump:reference": "DUMP_REQUEST_BODY_PATH=docs/request-body-reference.json tsx src/dump-body.ts",
     "erp": "tsx mock-erp/main.ts",
     "erp:generate": "orval --config orval.config.ts",
     "eval": "PROMPTFOO_DISABLE_TELEMETRY=1 promptfoo eval --config evals/promptfooconfig.yaml --no-cache",
     "eval:gate": "tsx evals/gate-cli.ts",
     "eval:report": "tsx evals/report.ts",
-    "extract": "tsx src/run.ts",
+    "extract:golden-set": "tsx src/extract-golden-set.ts",
     "golden:check": "tsx evals/golden/check.ts",
     "test": "vitest run"
   },

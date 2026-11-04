@@ -149,7 +149,7 @@ fake fetch (no API), or in a real run of a 04_module/ script.
 - Golden eval labels derive from docs/POLICY.md (Module 3), never from the system
   prompt. Rewording a prompt must not be able to move a label.
 - After changing DEFAULT_SYSTEM, schema.ts, or any generateText parameter: run
-  `DUMP_REQUEST_BODY=docs/request-body-reference.json npm run dump`, then
+  `npm run dump:reference`, then
   `git diff docs/request-body-reference.json`. Commit the regenerated reference in
   the same commit as the change that moved it. An unexpected diff means stop.
 - Business rules live in docs/POLICY.md. A change that would move a golden label
@@ -167,7 +167,7 @@ fake fetch (no API), or in a real run of a 04_module/ script.
   `npm test` and `npx tsc --noEmit`.
 - Top-level folders are sorted by role, not by topic (4.5): src/ is our
   application, the code that runs when an email is processed (pipeline,
-  entry points such as run.ts, config.ts, src/generated/); evals/ measures it;
+  entry points such as extract-golden-set.ts, config.ts, src/generated/); evals/ measures it;
   mock-erp/ stands in for another team's system; contracts/ holds documents
   received from other teams; docs/ our specifications and records;
   04_module/ teaching scripts. A file that belongs to two topics (R-17 reads
@@ -176,7 +176,8 @@ fake fetch (no API), or in a real run of a 04_module/ script.
   erp-stage.ts, erp-client.ts). The golden set and the code that compares
   model output with golden labels live in evals/golden/ (cases.ts, compare.ts,
   deadline.ts; moved from src/golden/ in 4.5) and are never called by the
-  pipeline. Tests and entry points may import them (urgency.test.ts, run.ts).
+  pipeline. Tests and entry points may import them (urgency.test.ts,
+  extract-golden-set.ts).
   evals/assertions/fields.ts only applies those helpers per field for
   promptfoo.
 - contracts/ holds documents other teams own (contracts/erp-api.json, the
@@ -216,7 +217,7 @@ fake fetch (no API), or in a real run of a 04_module/ script.
   src/generated/. Applies to the whole repo (renamed 26.10.2026); no
   linter checks it.
 - Pipeline functions return data and print nothing. Entry points decide what to
-  show: run.ts prints, the promptfoo provider reports to promptfoo.
+  show: extract-golden-set.ts prints, the promptfoo provider reports to promptfoo.
 - 04_module/ holds Module 4's teaching scripts and experiments. The 4.1 scripts
   call the API directly, with no fake switch (Felix's decision, 4.1: easier to
   read is worth the occasional cent), and print every request and response body
@@ -292,9 +293,12 @@ fake fetch (no API), or in a real run of a 04_module/ script.
 
 - `npm test` — runs every \*.test.ts file once (vitest); no API calls
 - `npx tsc --noEmit` — type check; the only one
-- `npm run extract` — runs the 22 golden-set emails (evals/golden/cases.ts) through the extractor
+- `npm run extract:golden-set` — runs the 22 golden-set emails (evals/golden/cases.ts) through the extractor
 - `npm run golden:check` — validates the golden set and reports how many cases are labelled
-- `DUMP_REQUEST_BODY=<path> npm run dump` — one API call, writes the exact wire payload
+- `npm run dump:reference` — one API call, writes the exact wire payload to
+  docs/request-body-reference.json (then `git diff` it; see Conventions)
+- `DUMP_REQUEST_BODY_PATH=<path> npm run dump` — the same to any other file,
+  e.g. a scratch file for a look without touching the reference
 - `npm run eval` — promptfoo runs the 22 golden cases through extractEmail (22 API
   calls, about 12.5 US cents). Pass options after `--`: `--filter-first-n 1`,
   `--filter-pattern 'E-1[45]'`, `--filter-errors-only <eval id>`. Exits with code
@@ -850,7 +854,7 @@ A-10001 to A-10003). No API call, no server.
   address or order number in its `unreachable` list.
 - Outcome texts: the code holds kinds (`refused`, …); the comments name the
   POLICY.md text for each. The German texts get one table in 4.7, where
-  run.ts first prints them.
+  the entry point first prints them.
 - Felix's decisions (POLICY.md, by committing the recommendation): v1.6
   R-15, lower-case prefix or missing hyphen is looked up, a space stays
   invalid; v1.7 R-14, ERP unreachable at the sender lookup records

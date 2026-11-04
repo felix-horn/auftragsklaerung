@@ -12,12 +12,16 @@ Rules:
 - Extract only what the text states. Do not infer facts that are not present.
 `;
 
+// Our own fetch sees every request body exactly as sent.
+// If DUMP_REQUEST_BODY_PATH names a file
+// (set on the command line, as `npm run dump:reference` does),
+// it writes the request body there, then sends the request unchanged.
 const anthropic = createAnthropic({
   fetch: async (url, options) => {
-    if (process.env.DUMP_REQUEST_BODY) {
+    if (process.env.DUMP_REQUEST_BODY_PATH) {
       const parsedBody = JSON.parse(options?.body as string);
       await writeFile(
-        process.env.DUMP_REQUEST_BODY,
+        process.env.DUMP_REQUEST_BODY_PATH,
         JSON.stringify(parsedBody, null, 2),
       );
     }
@@ -32,7 +36,7 @@ export type ExtractOptions = {
 };
 
 // Returns the extraction and the token usage. Printing is the caller's job:
-// run.ts prints both, the promptfoo provider passes them on to promptfoo.
+// extract-golden-set.ts prints both, the promptfoo provider passes them on to promptfoo.
 // Errors from generateText are not caught here and reach the caller as they are.
 // Two of them mean the model answered but gave nothing usable:
 // NoObjectGeneratedError (the answer is not valid JSON or fails the schema)
