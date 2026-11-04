@@ -42,7 +42,10 @@ export function normaliseOrderNumber(
 // What the ERP answered to one lookup. "unreachable" stands for every way
 // the ERP can fail to answer. As a value, not an exception: R-16 makes it an
 // outcome of its own.
-// TODO(Module 4.5): the HTTP client decides which failures are "unreachable".
+// Which failures are "unreachable" is decided in src/erp-client.ts; it
+// reports their details to the entry point, never in this value, so they
+// cannot reach the clerk (POLICY.md v1.8: an unusable answer counts as
+// „nicht erreichbar“).
 export type ErpAnswer<T> =
   | { kind: "found"; erpRecord: T }
   | { kind: "not_found" }

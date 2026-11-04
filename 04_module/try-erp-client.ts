@@ -1,5 +1,6 @@
-// Module 4.5, part 5: the ERP stage with the HTTP client, against whatever
-// answers at ERP_BASE_URL (.env). No API call.
+// Module 4.5, parts 5 and 6: the ERP stage with the HTTP client, against
+// whatever answers at ERP_BASE_URL (.env). No API call. A lookup that ends
+// as "unreachable" prints its problem for developers on stderr.
 //
 // Start the mock ERP first, in a second terminal:  npm run erp
 // Then:  npx tsx 04_module/try-erp-client.ts
@@ -10,11 +11,15 @@
 
 import "dotenv/config";
 import { loadConfig } from "../src/config.js";
-import { createErpClient } from "../src/erp-client.js";
+import { createErpClient, describeErpProblem } from "../src/erp-client.js";
 import { runErpStage } from "../src/erp-stage.js";
 
 const config = loadConfig();
-const erp = createErpClient(config.erpBaseUrl);
+// Problems go to stderr, one line each, before the result they belong to.
+const erp = createErpClient({
+  baseUrl: config.erpBaseUrl,
+  reportProblem: (problem) => console.error(describeErpProblem(problem)),
+});
 
 const lookups = [
   // A contact of K-51320, written with capitals (R-14 ignores case), asks
