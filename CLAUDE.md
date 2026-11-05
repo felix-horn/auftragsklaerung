@@ -6,6 +6,20 @@ German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
 ERP stage (Module 4) → (later) retrieval, reply drafts, approval queue; evals
 throughout. Built module by module.
 
+After Module 4.5 the two halves exist but are not joined yet:
+
+- Extraction: src/extract.ts (`extractEmail`, one model request) →
+  src/urgency.ts (`deriveUrgency`, R-13). Entry points: src/extract-golden-set.ts
+  (`npm run extract:golden-set`) and the promptfoo provider.
+- ERP: src/erp-stage.ts (`runErpStage`, R-14 to R-16) with src/erp-client.ts
+  (HTTP, see ERP client (Module 4.5)) or a fake; src/config.ts reads
+  `ERP_BASE_URL`. Entry point: 04_module/try-erp-client.ts, with typed-in
+  sender addresses and order numbers.
+- 4.6 adds R-17 (urgency after the lookup). 4.7 joins both halves in one
+  pipeline function (email text and sender address in) with a new entry
+  point; extract-golden-set.ts stays the extraction-only runner, because
+  the golden set has no sender addresses.
+
 ## Stack facts — verified, do not re-derive
 
 - Structured output on Anthropic goes via `output_config.format.schema`. Not a
@@ -83,6 +97,14 @@ throughout. Built module by module.
 - `@ai-sdk/anthropic` 4.0.49 accepts `apiKey` or `authToken` (Bearer), but does
   not do Anthropic's workload identity federation exchange (only Anthropic's own
   SDKs read `ANTHROPIC_IDENTITY_TOKEN_FILE`). See Deferred design questions.
+
+- TypeScript 7.0.2's npm package exports no JavaScript compiler API:
+  `require("typescript")` has two keys (the version), no `ts.factory` or
+  `ts.SyntaxKind`. Tools that build code with it crash although a peer range
+  like `>=5.5.3` lets npm install them (@hey-api/openapi-ts 0.99.0: "Cannot
+  read properties of undefined (reading 'AnyKeyword')"), and npm overrides
+  cannot give a peer dependency a version of its own (ERESOLVE). Checked in
+  4.5; see ERP contract (Module 4.5) for the generator chosen.
 
 ### Tool calling (Module 4.1; `ai` 7.0.93, `@ai-sdk/anthropic` 4.0.49)
 
@@ -197,8 +219,10 @@ fake fetch (no API), or in a real run of a 04_module/ script.
   evals/gate.ts, evals/gate-cli.ts and evals/baseline/ live there too but are not
   loaded by promptfoo: they read exported evals.
 - Comments describe what the code does now. Work that a later module does
-  is marked `// TODO(Module 4.5): short description`, so a search for TODO
-  lists all of it.
+  is marked `// TODO(Module 4.6): short description`, so a search for TODO
+  lists all of it. Work that waits for an outside event names the event:
+  `// TODO(when @hey-api/openapi-ts supports TypeScript 7): …`
+  (orval.config.ts).
 - Exported functions get a JSDoc comment (`/** … */`), so VS Code shows it
   on hover. New and rewritten functions get one; older functions when they
   are next rewritten, not for a rename.
@@ -225,7 +249,10 @@ fake fetch (no API), or in a real run of a 04_module/ script.
   call the API directly, with no fake switch (Felix's decision, 4.1: easier to
   read is worth the occasional cent), and print every request and response body
   through 04_module/logging-fetch.ts. minimal-http-server.ts (4.3) is node:http
-  on its own: no API, no ERP. Nothing in src/ imports them; tsc checks them.
+  on its own: no API, no ERP. 4.5 adds the OpenAPI and orval practice files
+  (minimal-http-server.openapi.json, minimal-http-server.orval.config.ts,
+  its generated .generated.ts, check-greetings.ts) and try-erp-client.ts.
+  Nothing in src/ imports them; tsc checks them.
 
 ## Observed numbers (20-email set, module-2 tag)
 
@@ -331,8 +358,18 @@ fake fetch (no API), or in a real run of a 04_module/ script.
   (Module 4.3)); no API call. Try
   `curl -s -w "\n%{http_code}\n" http://127.0.0.1:4100/orders/A-44821`.
 - `npm run erp:generate` — orval regenerates src/generated/erp-api.ts and
-  mock-erp/generated/erp-api.ts from contracts/erp-api.json (see ERP contract (Module 4.5)); no API call. CI
-  runs it too and fails if the result differs from the commit.
+  mock-erp/generated/erp-api.ts from contracts/erp-api.json (see ERP
+  contract (Module 4.5)); no API call. CI runs it too and fails if the
+  result differs from the commit.
+- `npx tsx 04_module/try-erp-client.ts` — the ERP stage with the HTTP client
+  against ERP_BASE_URL (start `npm run erp` first): three lookups with the
+  seed's addresses, problems for developers on stderr; no API call. With
+  `ERP_BASE_URL=http://127.0.0.1:4100/api` in front: a wrong base URL; with
+  the mock stopped: no connection.
+- `npx orval --config 04_module/minimal-http-server.orval.config.ts`, then
+  `npx tsx 04_module/check-greetings.ts` — the 4.5 orval practice: Zod from
+  the minimal server's OpenAPI document, used on typed-in bodies; no API
+  call, no server.
 
 ## Eval comparison (Module 3.4)
 
@@ -759,6 +796,63 @@ Stands in for the company's ERP. Built in 4.3; our ERP client calls it from
   port exits with code 7 and prints no status. In zsh, a URL with `?` must be
   quoted (plain zsh: "no matches found").
 
+## ERP stage rules (Module 4.4)
+
+POLICY.md R-14 to R-16 (v1.7) in src/erp-stage.ts, tested in
+src/erp-stage.test.ts (24 tests, invented records: K-20001 with
+einkauf@/m.weber@alpha.example, K-20002 with bestellung@beta.example,
+A-10001 to A-10003). No API call, no server.
+
+- Pure functions:
+  - `normaliseEmailAddress`: R-14, the address in lower case (the ERP
+    stores lower case and compares exactly). Expects the bare address;
+    taking it out of a "Name <address>" header belongs to ingestion
+    (Module 7).
+  - `normaliseOrderNumber`: R-15 (v1.6). `/^([Aa]-?)?\d{5}$/` becomes "A-"
+    plus the five digits, anything else `null` (= invalid, never sent to
+    the ERP). "A 10001", "A--10001", "K-20001" are invalid. Limit: five
+    bare digits are looked up whether R-09 Stufe 2 or Stufe 3; E-07's
+    "78432" (recorded in 10/10 baseline runs) becomes a lookup of A-78432,
+    E-21's "K-62418" (10/10) is invalid.
+  - `revealOrderOnlyToOwner(askingCustomerNumber, answer)`: R-16. Another
+    customer's order and a missing one give the same `refused`.
+- Types: `ErpAnswer<T>` = found (erpRecord) / not_found / unreachable, a value,
+  not an exception. `OrderOutcome` = order / refused / invalid /
+  unreachable; only `order` carries data, the whole contract `Order`.
+  `ErpStageResult` = unknown_sender / unreachable (R-14, v1.7: ERP down at
+  the sender lookup; nothing looked up) / assigned (customerNumber plus one
+  `{ extractedOrderNumber, outcome }` per extracted number, in the order
+  the extraction listed them, the number as extracted).
+- `runErpStage(input, erp)`: sender first; for unknown_sender and
+  unreachable nothing else is asked. Order lookups run concurrently
+  (`Promise.all`), the results keep the order the extraction listed them;
+  one unreachable lookup doesn't affect the others; the same number
+  extracted twice is looked up twice (nothing merged). The input has no
+  customer numbers, so they can't assign the sender (R-14).
+- The ERP is passed in (`Erp` interface, two functions). `ERP_BASE_URL`
+  (4.5) picks which server the HTTP client talks to; the parameter picks
+  HTTP client or in-memory fake. Rejected: a module-level client imported
+  by the stage (DKLB style), because unit tests would then need `vi.mock`
+  or the mock server, and test-only behaviour lands in the mock or in
+  production code (an "is this the mock?" check on the URL, which drifts
+  when deployments change). The AI SDK works the same way:
+  `generateText({ model })`, with test doubles in `ai/test`.
+- The fake ERP lives in src/erp-stage.test.ts: exact matching like the mock,
+  no business rule, records every lookup in `calls`, and fails for every
+  address or order number in its `unreachable` list.
+- Outcome texts: the code holds kinds (`refused`, …); the comments name the
+  POLICY.md text for each. The German texts get one table in 4.7, where
+  the entry point first prints them.
+- Felix's decisions (POLICY.md, by committing the recommendation): v1.6
+  R-15, lower-case prefix or missing hyphen is looked up, a space stays
+  invalid; v1.7 R-14, ERP unreachable at the sender lookup records
+  „Auftragsbestand nicht erreichbar.“ (not „keinem Kunden zugeordnet“).
+- Renamed by Felix on 26.10.2026 (no behaviour change): decideOrderOutcome
+  → revealOrderOnlyToOwner, ErpAnswer's `record` → `erpRecord`,
+  OrderLookup's `recorded` → `extractedOrderNumber`, erpDataSchema and
+  ErpData → mockErpDataSchema and MockErpData. Commits and handovers
+  before that date use the old names.
+
 ## ERP contract (Module 4.5)
 
 The ERP team owns the contract. Its source is their OpenAPI document,
@@ -821,62 +915,74 @@ When the ERP team sends a new version of the document:
 6. Commit the document, both generated files and every fix together, so
    one commit is one contract version. CI then runs the generation check.
 
-## ERP stage rules (Module 4.4)
+## ERP client (Module 4.5)
 
-POLICY.md R-14 to R-16 (v1.7) in src/erp-stage.ts, tested in
-src/erp-stage.test.ts (24 tests, invented records: K-20001 with
-einkauf@/m.weber@alpha.example, K-20002 with bestellung@beta.example,
-A-10001 to A-10003). No API call, no server.
+src/erp-client.ts implements `Erp` over HTTP against the paths of
+contracts/erp-api.json; src/config.ts gives it the base URL. Every fact
+below was checked in a scratch copy (Node 24.21.0, zod 4.5.4) or on
+Felix's Mac.
 
-- Pure functions:
-  - `normaliseEmailAddress`: R-14, the address in lower case (the ERP
-    stores lower case and compares exactly). Expects the bare address;
-    taking it out of a "Name <address>" header belongs to ingestion
-    (Module 7).
-  - `normaliseOrderNumber`: R-15 (v1.6). `/^([Aa]-?)?\d{5}$/` becomes "A-"
-    plus the five digits, anything else `null` (= invalid, never sent to
-    the ERP). "A 10001", "A--10001", "K-20001" are invalid. Limit: five
-    bare digits are looked up whether R-09 Stufe 2 or Stufe 3; E-07's
-    "78432" (recorded in 10/10 baseline runs) becomes a lookup of A-78432,
-    E-21's "K-62418" (10/10) is invalid.
-  - `revealOrderOnlyToOwner(askingCustomerNumber, answer)`: R-16. Another
-    customer's order and a missing one give the same `refused`.
-- Types: `ErpAnswer<T>` = found (erpRecord) / not_found / unreachable, a value,
-  not an exception. `OrderOutcome` = order / refused / invalid /
-  unreachable; only `order` carries data, the whole contract `Order`.
-  `ErpStageResult` = unknown_sender / unreachable (R-14, v1.7: ERP down at
-  the sender lookup; nothing looked up) / assigned (customerNumber plus one
-  `{ extractedOrderNumber, outcome }` per extracted number, in the order
-  the extraction listed them, the number as extracted).
-- `runErpStage(input, erp)`: sender first; for unknown_sender and
-  unreachable nothing else is asked. Order lookups run concurrently
-  (`Promise.all`), the results keep the order the extraction listed them;
-  one unreachable lookup doesn't affect the others; the same number
-  extracted twice is looked up twice (nothing merged). The input has no
-  customer numbers, so they can't assign the sender (R-14).
-- The ERP is passed in (`Erp` interface, two functions). `ERP_BASE_URL`
-  (4.5) picks which server the HTTP client talks to; the parameter picks
-  HTTP client or in-memory fake. Rejected: a module-level client imported
-  by the stage (DKLB style), because unit tests would then need `vi.mock`
-  or the mock server, and test-only behaviour lands in the mock or in
-  production code (an "is this the mock?" check on the URL, which drifts
-  when deployments change). The AI SDK works the same way:
-  `generateText({ model })`, with test doubles in `ai/test`.
-- The fake ERP lives in src/erp-stage.test.ts: exact matching like the mock,
-  no business rule, records every lookup in `calls`, and fails for every
-  address or order number in its `unreachable` list.
-- Outcome texts: the code holds kinds (`refused`, …); the comments name the
-  POLICY.md text for each. The German texts get one table in 4.7, where
-  the entry point first prints them.
-- Felix's decisions (POLICY.md, by committing the recommendation): v1.6
-  R-15, lower-case prefix or missing hyphen is looked up, a space stays
-  invalid; v1.7 R-14, ERP unreachable at the sender lookup records
-  „Auftragsbestand nicht erreichbar.“ (not „keinem Kunden zugeordnet“).
-- Renamed by Felix on 26.10.2026 (no behaviour change): decideOrderOutcome
-  → revealOrderOnlyToOwner, ErpAnswer's `record` → `erpRecord`,
-  OrderLookup's `recorded` → `extractedOrderNumber`, erpDataSchema and
-  ErpData → mockErpDataSchema and MockErpData. Commits and handovers
-  before that date use the old names.
+- `createErpClient({ baseUrl, reportProblem, timeoutMilliseconds })`. An
+  entry point builds it: `loadConfig()` (src/config.ts, the only place that
+  reads environment variables), then `baseUrl: config.erpBaseUrl`. Pipeline
+  code gets the client passed in (4.4) and never imports config.ts, so unit
+  tests and CI need no .env.
+- Answers: 200 whose body passes the generated schema → `found`; 404 whose
+  body passes the operation's not-found schema (one allowed text) →
+  `not_found`; everything else → `unreachable` (POLICY.md v1.8: an answer
+  that is not in the agreed form counts as „nicht erreichbar“).
+- Every `unreachable` first calls `reportProblem` with an `ErpProblem`:
+  kind, request ("GET <url>"), status (null without an answer), detail.
+  | kind | when | detail |
+  |---|---|---|
+  | no_connection | fetch fails: nothing listening, unknown host | network code and message, e.g. `ECONNREFUSED: connect ECONNREFUSED 127.0.0.1:4100` |
+  | timeout | no complete answer in time, headers or body | `no complete answer within <n> ms` |
+  | unexpected_status | not 200 or 404 (500, 503, 401, …) | `status <n>` |
+  | not_json | the body is not JSON | `content type <type>` |
+  | breaks_contract | a 200 or 404 that fails its schema | Zod's issues, `field: message`; for a 404 plus "is ERP_BASE_URL right?" |
+  `describeErpProblem` turns one into a line for a log;
+  04_module/try-erp-client.ts prints it on stderr.
+- Why a function and not a field in `ErpAnswer` (4.5, Claude's call; in
+  4.4 Felix had been told "the client returns the details"): in the
+  answer, the details would have to travel through `runErpStage`, whose
+  result goes to the clerk. Through `reportProblem` they never enter it,
+  and runErpStage and its tests stay unchanged. The client prints nothing;
+  the entry point decides where problems go.
+- Never the ERP's body in a problem: it holds customer data.
+  `response.json()` on an HTML page fails with a SyntaxError that quotes
+  the body ("Unexpected token '<', "<html>…" is not valid JSON"), so
+  not_json reports the content type only. Zod 4.5.4's messages name the
+  field and the expectation, not the value received (tested with a date
+  "02.11.2026": `promisedDeliveryDate: Invalid ISO date`). The request line
+  of a customer lookup does hold the sender address in its query; where
+  such lines may be stored is Module 9's decision.
+- Timeout: `fetch(url, { signal: AbortSignal.timeout(n) })`, default 5000 ms
+  (the mock answers in milliseconds; an ERP that needs seconds is in
+  trouble, and the email waits). The signal also ends a body that stops
+  halfway: the test gets status 200 and kind timeout. Retries are Module 7.
+- Node 24.21.0 fetch: nothing listening → TypeError "fetch failed" whose
+  `cause` has code ECONNREFUSED; unknown host → cause code ENOTFOUND; the
+  timeout → DOMException named "TimeoutError", during headers and during
+  the body.
+- The address goes through `URLSearchParams` ("email" is the ERP's name
+  for the parameter): unencoded, "+" arrives as a space and the customer
+  is not found.
+- Tests: src/erp-client.test.ts, 16. Six documented answers against the
+  mock ERP started on a free port (port 0), each also asserting that no
+  problem was reported. Ten failures: a closed port; eight against a server
+  in the test file that misbehaves on purpose (never in the mock, which
+  answers only as the document says), the last of them through
+  runErpStage, whose outcome carries no details; a wrong base URL against
+  the mock with the exact log lines. A server with requests that never get
+  an answer needs `closeAllConnections()` before `close()`, or close waits
+  for them.
+- Config (src/config.ts, 5 tests): `parseConfig(env)` returns `valid` with
+  the config or `invalid` with Zod's problems as text; `loadConfig()`
+  prints them and exits with code 1. ERP_BASE_URL must be an http(s) URL
+  (`z.url({ protocol: /^https?$/ })`; "localhost:4100" is a valid URL with
+  the scheme "localhost:", so the protocol rule is what refuses it); a
+  trailing slash is removed. dotenv never overrides a variable already set
+  in the shell, so `ERP_BASE_URL=… npx tsx …` wins over .env.
 
 ## Open experiments
 
@@ -921,6 +1027,11 @@ The others wait for the larger golden set (Module 6 onward).
 
 ## Deferred design questions
 
+- The ERP client before a real ERP: a timeout per deployment if a real ERP
+  needs more than 5 s (then a second variable in config.ts, with its
+  reason); retries with backoff for `unreachable` (Module 7); where
+  problem lines are stored and for how long, since a customer lookup's
+  line holds the sender address (Module 9).
 - A folder src/erp/ for the ERP's pipeline files (Claude's proposal in 4.5,
   recorded at Felix's request). Today three files with the erp- prefix
   (erp-client.ts, erp-contract.ts, erp-stage.ts, plus two tests) sit next to
