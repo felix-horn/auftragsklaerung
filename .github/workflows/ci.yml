@@ -40,9 +40,9 @@ jobs:
       - name: Generated code matches contracts/
         run: |
           npm run erp:generate
-          git --no-pager diff -- src/generated/
-          git status --short -- src/generated/
-          test -z "$(git status --porcelain -- src/generated/)"
+          git --no-pager diff -- src/generated/ mock-erp/generated/
+          git status --short -- src/generated/ mock-erp/generated/
+          test -z "$(git status --porcelain -- src/generated/ mock-erp/generated/)"
 
       - name: Type check
         run: npx tsc --noEmit

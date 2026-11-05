@@ -1,8 +1,10 @@
 import { defineConfig } from "orval";
 
 // Zod schemas from the OpenAPI documents of outside systems (contracts/),
-// written to src/generated/. Run: npm run erp:generate. The generated files
-// are committed; never edit them by hand. When the ERP team sends a new
+// one copy per side of the contract: src/generated/ for our application,
+// mock-erp/generated/ for the mock ERP, so neither imports the other's
+// code; the document is the only link. Run: npm run erp:generate. The
+// generated files are committed; never edit them by hand. When the ERP team sends a new
 // document: CLAUDE.md, ERP contract (Module 4.5), the numbered steps.
 //
 // TODO(when @hey-api/openapi-ts supports TypeScript 7): switch the Zod
@@ -40,6 +42,17 @@ export default defineConfig({
     output: {
       mode: "single",
       target: "./src/generated/erp-api.ts",
+      client: "zod",
+      override: { zod: { generateEachHttpStatus: true } },
+    },
+  },
+  // The same document for the mock ERP (mock-erp/), which stands in for the
+  // ERP's side of the contract. It uses orval's names directly.
+  erpMock: {
+    input: { target: "./contracts/erp-api.json" },
+    output: {
+      mode: "single",
+      target: "./mock-erp/generated/erp-api.ts",
       client: "zod",
       override: { zod: { generateEachHttpStatus: true } },
     },

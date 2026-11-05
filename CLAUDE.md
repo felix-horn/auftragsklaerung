@@ -182,13 +182,16 @@ fake fetch (no API), or in a real run of a 04_module/ script.
   promptfoo.
 - contracts/ holds documents other teams own (contracts/erp-api.json, the
   ERP's OpenAPI document): never edited, replaced as a whole.
-  src/generated/ holds code generated from them (npm run erp:generate):
-  never edited by hand, committed, and checked by CI against a fresh
-  generation.
+  Each side of a contract generates its own code from them (npm run
+  erp:generate): src/generated/ for our application, mock-erp/generated/
+  for the mock. Never edited by hand, committed, and checked by CI against
+  a fresh generation.
 - mock-erp/ stands in for an outside system (Module 4.3): neither pipeline nor
-  eval code. It imports the contract from src/erp-contract.ts. Pipeline code
-  in src/ never imports mock-erp/; tests may start it as the stand-in ERP
-  (src/erp-client.test.ts, 4.5).
+  eval code. It imports nothing from src/: its contract is its own
+  generated copy (mock-erp/generated/), so the document is the only link
+  between the two sides (taken from Felix's DKLB monorepo, 4.5). Pipeline
+  code in src/ never imports mock-erp/; tests may start it as the stand-in
+  ERP (src/erp-client.test.ts, 4.5).
 - Everything promptfoo loads lives in evals/ (config, providers/, assertions/,
   golden-tests.ts, which loads golden/); nothing in src/ imports promptfoo. evals/report.ts,
   evals/gate.ts, evals/gate-cli.ts and evals/baseline/ live there too but are not
@@ -214,7 +217,7 @@ fake fetch (no API), or in a real run of a 04_module/ script.
   it is: `const matchingCustomer = customers.find((customer) => …)`.
   Allowed: established acronyms (ERP, URL, JSON, API, `id`), names fixed
   by an outside format (promptfoo's `testIdx`, `process.env`) and
-  src/generated/. Applies to the whole repo (renamed 26.10.2026); no
+  src/generated/ and mock-erp/generated/. Applies to the whole repo (renamed 26.10.2026); no
   linter checks it.
 - Pipeline functions return data and print nothing. Entry points decide what to
   show: extract-golden-set.ts prints, the promptfoo provider reports to promptfoo.
@@ -327,8 +330,8 @@ fake fetch (no API), or in a real run of a 04_module/ script.
 - `npm run erp` — the mock ERP on 127.0.0.1:4100 until Ctrl+C (see Mock ERP
   (Module 4.3)); no API call. Try
   `curl -s -w "\n%{http_code}\n" http://127.0.0.1:4100/orders/A-44821`.
-- `npm run erp:generate` — orval regenerates src/generated/erp-api.ts from
-  contracts/erp-api.json (see ERP contract (Module 4.5)); no API call. CI
+- `npm run erp:generate` — orval regenerates src/generated/erp-api.ts and
+  mock-erp/generated/erp-api.ts from contracts/erp-api.json (see ERP contract (Module 4.5)); no API call. CI
   runs it too and fails if the result differs from the commit.
 
 ## Eval comparison (Module 3.4)
@@ -628,17 +631,18 @@ built from 4.3 on.
 - Mock ERP (built in 4.3): a plain `node:http` server in this repo, started as
   its own process, serving one JSON file of invented customers (with contact
   addresses) and orders. The seed holds what the end-to-end cases need (see
-  Mock ERP (Module 4.3)). Zod schemas in src/ are the contract: the mock validates its data with them
-  on load, our client validates every response with them. Since 4.5 they
-  are generated from the ERP's OpenAPI document (ERP contract (Module 4.5)).
-  Base URL from
-  `ERP_BASE_URL` in .env. Errors: 404 for an unknown order or address, and
+  Mock ERP (Module 4.3)). Zod schemas are the contract: the mock validates
+  its data with them on load, our client validates every response with
+  them. Since 4.5 each side generates its own copy from the ERP's OpenAPI
+  document (ERP contract (Module 4.5)). Base URL from `ERP_BASE_URL` in
+  .env. Errors: 404 for an unknown order or address, and
   "not reachable"; both map to R-16 outcomes. "Today" for R-17 is passed in,
   never read inside the stage. Not Next.js: Next.js practice comes in Module
   8, where it is the app.
 - Taken from Felix's mock backend of an earlier work project (DKLB), scaled
-  down: base URL from env, a seed with problem cases, one contract shared by
-  mock and client, deterministic time. Not taken, because nothing in Module 4
+  down: base URL from env, a seed with problem cases, one contract for mock
+  and client (since 4.5 one OpenAPI document, from which each side
+  generates its own Zod schemas), deterministic time. Not taken, because nothing in Module 4
   writes data or lets a model call tools: a generated client and generated
   server types (4.5 took the OpenAPI document as the contract's source and
   generates Zod schemas from it, not a client), monorepo, handler registry, stateful database, per-case
@@ -683,9 +687,9 @@ Stands in for the company's ERP. Built in 4.3; our ERP client calls it from
 4.5 on. Every fact below was checked in a scratch copy (Node 24.21.0, zod
 4.5.4) or on Felix's Mac.
 
-- Files (as of 4.5): src/erp-contract.ts (the contract under our names,
-  generated from contracts/erp-api.json since 4.5; see ERP contract (Module
-  4.5)); mock-erp/data-schema.ts (the seed file's rules: the contract plus
+- Files (as of 4.5): mock-erp/generated/erp-api.ts (the contract, the
+  mock's own copy generated from contracts/erp-api.json; see ERP contract
+  (Module 4.5)); mock-erp/data-schema.ts (the seed file's rules: the contract plus
   lower-case addresses and nothing twice; 9 tests in data-schema.test.ts,
   moved from src/erp-contract.test.ts in 4.5); mock-erp/data.json (the
   seed); mock-erp/data.test.ts (the seed against data-schema.ts, so
@@ -767,7 +771,13 @@ TypeScript 7.0.2, zod 4.5.4, orval 8.44.0.
   operationId plus status code, e.g. GetOrder200Response) →
   src/erp-contract.ts (our names: customerSchema, orderSchema,
   customerNotFoundSchema, orderNotFoundSchema, missingEmailSchema; types
-  Customer, Order). Only erp-contract.ts knows orval's names.
+  Customer, Order). In src/, only erp-contract.ts knows orval's names.
+- The mock's side: the same document → a second orval target →
+  mock-erp/generated/erp-api.ts, identical to src/generated/erp-api.ts.
+  mock-erp/ uses orval's names directly (no rename file: it needs only
+  the schemas for its seed and its server test). Two copies on purpose: in
+  production the ERP team generates its side on its own; neither side
+  imports the other's code.
 - What becomes a check: `pattern` (.regex), `format: date` (z.iso.date()),
   `format: email`, `enum`, `type: ["string", "null"]` (.nullable()),
   `required`. What doesn't: `description` (.describe() text only),
@@ -784,16 +794,19 @@ TypeScript 7.0.2, zod 4.5.4, orval 8.44.0.
   orval.config.ts.
 - Checks: mock-erp/server.test.ts (every documented answer of the mock
   against the generated schemas); CI step "Generated code matches
-  contracts/" (regenerates and fails on any difference in src/generated/).
+  contracts/" (regenerates and fails on any difference in src/generated/
+  or mock-erp/generated/).
 
 When the ERP team sends a new version of the document:
 
 1. Replace contracts/erp-api.json with it as a whole; never edit it by
    hand. Its `info.version` names the version.
 2. `npm run erp:generate`, then `git diff src/generated/`: that diff is the
-   change in Zod terms. Read it before anything else.
+   change in Zod terms. Read it before anything else. mock-erp/generated/
+   shows the same diff.
 3. `npx tsc --noEmit`. A renamed operation or status code changes orval's
-   names: fix the imports in src/erp-contract.ts first, nowhere else. A
+   names: fix the imports in src/erp-contract.ts (our side) and in
+   mock-erp/data-schema.ts and mock-erp/server.test.ts (the mock's side). A
    renamed or removed field then shows up in the code that uses Customer or
    Order.
 4. Decide what the diff means beyond compiling. A new field is ignored until
@@ -805,7 +818,7 @@ When the ERP team sends a new version of the document:
    mock-erp/data.test.ts means the seed has to follow: fix
    mock-erp/data.json. A failing src/erp-client.test.ts means the client's
    reading of the answers changed.
-6. Commit the document, the generated file and every fix together, so
+6. Commit the document, both generated files and every fix together, so
    one commit is one contract version. CI then runs the generation check.
 
 ## ERP stage rules (Module 4.4)
@@ -917,6 +930,19 @@ The others wait for the larger golden set (Module 6 onward).
   Rejected in 4.5: a top-level erp/ with the mock nested inside (Felix's
   proposal), because it splits our application over two folders and mixes
   it with the stand-in.
+- apps/ and packages/ at the top, as in Felix's DKLB monorepo (Felix's
+  proposal in 4.5; deferred to Module 8 on Claude's recommendation). Target
+  layout once the Next.js approval queue exists: apps/web/ (Module 8),
+  apps/erp-mock/ (today's mock-erp/), packages/pipeline/ (today's src/),
+  contracts/ and evals/ stay at the top. Why not now: src/ is imported by
+  evals/, 04_module/ and later the web app, so in that layout it is a
+  package, not an app (moving it to apps/ now means moving it again in
+  Module 8); with one package.json and one tsconfig, apps/ would only name
+  folders, not keep them apart as DKLB's workspaces do; and today there
+  is one app of ours. Taken already in 4.5: each side generates its own
+  code from contracts/ (mock-erp/generated/). Whether to add workspaces is
+  decided with the move. About 20 files reference src/ (imports, scripts,
+  orval.config.ts, CI, the promptfoo provider), plus CLAUDE.md.
 
 - `other` used as a hedge (E-16, E-17): sharpen prose, remove the enum value,
   or require a justification field. After 3.6. Seen in 3.7: E-16 adds `other` in 3

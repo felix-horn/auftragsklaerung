@@ -2,12 +2,12 @@ import type { AddressInfo } from "node:net";
 import { afterAll, beforeAll, expect, test, vi } from "vitest";
 import type { z } from "zod";
 import {
-  customerNotFoundSchema,
-  customerSchema,
-  missingEmailSchema,
-  orderNotFoundSchema,
-  orderSchema,
-} from "../src/erp-contract.js";
+  FindCustomerByEmail200Response,
+  FindCustomerByEmail400Response,
+  FindCustomerByEmail404Response,
+  GetOrder200Response,
+  GetOrder404Response,
+} from "./generated/erp-api.js";
 import type { MockErpData } from "./data-schema.js";
 import { createMockErp } from "./server.js";
 
@@ -82,7 +82,7 @@ test("GET /customers with a registered address: 200, a Customer", async () => {
   await expectDocumentedAnswer(
     "/customers?email=m.weber%40alpha.example",
     200,
-    customerSchema,
+    FindCustomerByEmail200Response,
   );
 });
 
@@ -90,19 +90,19 @@ test("GET /customers with an unknown address: 404, the documented text", async (
   await expectDocumentedAnswer(
     "/customers?email=nobody%40alpha.example",
     404,
-    customerNotFoundSchema,
+    FindCustomerByEmail404Response,
   );
 });
 
 test("GET /customers without email: 400, an ErrorResponse", async () => {
-  await expectDocumentedAnswer("/customers", 400, missingEmailSchema);
+  await expectDocumentedAnswer("/customers", 400, FindCustomerByEmail400Response);
 });
 
 test("GET /orders/{orderNumber}, an order in progress and a delivered one: 200, an Order", async () => {
-  await expectDocumentedAnswer("/orders/A-10001", 200, orderSchema);
-  await expectDocumentedAnswer("/orders/A-10003", 200, orderSchema);
+  await expectDocumentedAnswer("/orders/A-10001", 200, GetOrder200Response);
+  await expectDocumentedAnswer("/orders/A-10003", 200, GetOrder200Response);
 });
 
 test("GET /orders/{orderNumber} with an unknown number: 404, the documented text", async () => {
-  await expectDocumentedAnswer("/orders/A-99999", 404, orderNotFoundSchema);
+  await expectDocumentedAnswer("/orders/A-99999", 404, GetOrder404Response);
 });

@@ -1,10 +1,14 @@
 import { z } from "zod";
-import { customerSchema, orderSchema } from "../src/erp-contract.js";
+import {
+  FindCustomerByEmail200Response,
+  GetOrder200Response,
+} from "./generated/erp-api.js";
 
 // The mock ERP's data file, mock-erp/data.json. Every record must be what
-// the ERP's contract promises (src/erp-contract.ts). On top of that, two
-// rules that hold for this file but generate no check from the OpenAPI
-// document:
+// the ERP's contract promises: the Zod schemas the mock generates from
+// contracts/erp-api.json (npm run erp:generate), under orval's names
+// (operationId plus status code). On top of that, two rules that hold for
+// this file but generate no check from the OpenAPI document:
 // - Contact addresses are lower case. The document says so only in a
 //   description ("stored in lower case"), which orval turns into
 //   .describe() text, not into a check.
@@ -12,14 +16,14 @@ import { customerSchema, orderSchema } from "../src/erp-contract.js";
 //   because a lookup by any of them must find at most one record.
 // The mock ERP refuses to start on a file that breaks them (main.ts).
 
-const customerRecord = customerSchema.extend({
+const customerRecord = FindCustomerByEmail200Response.extend({
   contactEmails: z.array(z.email().lowercase("must be lower case")),
 });
 
 export const mockErpDataSchema = z
   .object({
     customers: z.array(customerRecord),
-    orders: z.array(orderSchema),
+    orders: z.array(GetOrder200Response),
   })
   .superRefine((data, context) => {
     const checkUnique = (
