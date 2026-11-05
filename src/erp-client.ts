@@ -91,24 +91,23 @@ export function createErpClient({
     });
 
   return {
-    findCustomerBySender(senderAddress) {
+    findCustomerByEmailAddress: (senderEmailAddress) => {
       // "email" is the ERP's name for the query parameter. URLSearchParams
       // encodes "@" and "+": unencoded, a "+" in an address arrives at the
       // ERP as a space.
-      const query = new URLSearchParams({ email: senderAddress });
+      const query = new URLSearchParams({ email: senderEmailAddress });
       return lookUpWith<Customer>(
         `${baseUrl}/customers?${query}`,
         customerSchema,
         customerNotFoundSchema,
       );
     },
-    getOrderStatus(orderNumber) {
-      return lookUpWith<Order>(
+    getOrderStatus: (orderNumber) =>
+      lookUpWith<Order>(
         `${baseUrl}/orders/${encodeURIComponent(orderNumber)}`,
         orderSchema,
         orderNotFoundSchema,
-      );
-    },
+      ),
   };
 }
 

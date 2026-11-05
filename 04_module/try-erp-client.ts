@@ -25,21 +25,21 @@ const lookups = [
   // A contact of K-51320, written with capitals (R-14 ignores case), asks
   // about its two orders; "44100" without prefix (R-15).
   {
-    senderAddress: "L.Vogt@kessler-fluidtechnik.example",
+    senderEmailAddress: "L.Vogt@kessler-fluidtechnik.example",
     orderNumbers: ["A-44821", "44100"],
   },
   // A contact of K-58047 asks about K-51320's order (R-16).
   {
-    senderAddress: "bestellung@wendt-maschinenbau.example",
+    senderEmailAddress: "bestellung@wendt-maschinenbau.example",
     orderNumbers: ["A-44821"],
   },
   // An address no customer has (R-14).
-  { senderAddress: "info@unbekannt.example", orderNumbers: ["A-44821"] },
+  { senderEmailAddress: "info@unbekannt.example", orderNumbers: ["A-44821"] },
 ];
 
 console.log(`ERP at ${config.erpBaseUrl}`);
 for (const input of lookups) {
   const result = await runErpStage(input, erp);
-  console.log(`\n${input.senderAddress} asks about ${input.orderNumbers.join(", ")}`);
+  console.log(`\n${input.senderEmailAddress} asks about ${input.orderNumbers.join(", ")}`);
   console.log(JSON.stringify(result, null, 2));
 }

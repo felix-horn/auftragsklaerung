@@ -79,7 +79,7 @@ const misbehaviour: Record<string, (response: ServerResponse) => void> = {
       shippedOn: null,
     }),
   // Accepts the request and never answers.
-  "/orders/A-50004": () => {},
+  "/orders/A-50004": () => { },
   // Sends the status and half a body, then nothing.
   "/orders/A-50005": (response) => {
     response.writeHead(200, { "content-type": "application/json" });
@@ -107,7 +107,7 @@ let closedPortUrl = "";
 
 beforeAll(async () => {
   // The mock prints one line per request; keep the test output free of it.
-  vi.spyOn(console, "log").mockImplementation(() => {});
+  vi.spyOn(console, "log").mockImplementation(() => { });
   mockUrl = await listenOnFreePort(mockErp);
   misbehavingUrl = await listenOnFreePort(misbehavingErp);
   // A port that was free a moment ago and has nothing listening now.
@@ -149,7 +149,9 @@ function createClientWithProblems(
 
 test("a registered address: found, with the customer", async () => {
   const { erp, problems } = createClientWithProblems(mockUrl);
-  expect(await erp.findCustomerBySender("einkauf@alpha.example")).toEqual({
+  expect(
+    await erp.findCustomerByEmailAddress("einkauf@alpha.example"),
+  ).toEqual({
     kind: "found",
     erpRecord: data.customers[0],
   });
@@ -158,7 +160,9 @@ test("a registered address: found, with the customer", async () => {
 
 test("an address with a + is sent encoded and found", async () => {
   const { erp, problems } = createClientWithProblems(mockUrl);
-  expect(await erp.findCustomerBySender("m.weber+erp@alpha.example")).toEqual({
+  expect(
+    await erp.findCustomerByEmailAddress("m.weber+erp@alpha.example"),
+  ).toEqual({
     kind: "found",
     erpRecord: data.customers[0],
   });
@@ -167,7 +171,9 @@ test("an address with a + is sent encoded and found", async () => {
 
 test("an address no customer has: not_found", async () => {
   const { erp, problems } = createClientWithProblems(mockUrl);
-  expect(await erp.findCustomerBySender("nobody@alpha.example")).toEqual({
+  expect(
+    await erp.findCustomerByEmailAddress("nobody@alpha.example"),
+  ).toEqual({
     kind: "not_found",
   });
   expect(problems).toEqual([]);
@@ -198,7 +204,7 @@ test("runErpStage with the client: own order, another customer's, a missing one,
   const { erp, problems } = createClientWithProblems(mockUrl);
   const result = await runErpStage(
     {
-      senderAddress: "Einkauf@Alpha.example",
+      senderEmailAddress: "Einkauf@Alpha.example",
       orderNumbers: ["A-10001", "A-10003", "a99999", "K-20001"],
     },
     erp,
@@ -308,7 +314,9 @@ test("a date in the wrong format: breaks_contract, without the value the ERP sen
 
 test("a customer without customer number: unreachable, breaks_contract", async () => {
   const { erp, problems } = createClientWithProblems(misbehavingUrl);
-  expect(await erp.findCustomerBySender("broken@gamma.example")).toEqual({
+  expect(
+    await erp.findCustomerByEmailAddress("broken@gamma.example"),
+  ).toEqual({
     kind: "unreachable",
   });
   expect(problems).toMatchObject([
@@ -326,7 +334,9 @@ test("a wrong base URL: unreachable, breaks_contract on the 404, not not_found",
   // The mock answers 404 "no such endpoint" for /api/…: a 404, but not the
   // documented one.
   const { erp, problems } = createClientWithProblems(`${mockUrl}/api`);
-  expect(await erp.findCustomerBySender("einkauf@alpha.example")).toEqual({
+  expect(
+    await erp.findCustomerByEmailAddress("einkauf@alpha.example"),
+  ).toEqual({
     kind: "unreachable",
   });
   expect(await erp.getOrderStatus("A-10001")).toEqual({ kind: "unreachable" });
@@ -339,7 +349,7 @@ test("a wrong base URL: unreachable, breaks_contract on the 404, not not_found",
 test("runErpStage with a failing order lookup: the outcome carries no details, the problem goes to the reporter", async () => {
   const { erp, problems } = createClientWithProblems(misbehavingUrl);
   const result = await runErpStage(
-    { senderAddress: "einkauf@alpha.example", orderNumbers: ["A-50002"] },
+    { senderEmailAddress: "einkauf@alpha.example", orderNumbers: ["A-50002"] },
     erp,
   );
   expect(result).toEqual({

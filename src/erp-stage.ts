@@ -13,8 +13,10 @@ import type { Customer, Order } from "./erp-contract.js";
  * Expects the bare address ("m.weber@alpha.example"), not a header with a
  * display name ("Max Weber <m.weber@alpha.example>").
  */
-export function normaliseSenderAddress(senderAddress: string): string {
-  return senderAddress.toLowerCase();
+export function normaliseEmailAddress(
+  senderEmailAddress: string,
+): string {
+  return senderEmailAddress.toLowerCase();
 }
 
 // R-15: five digits, with or without a prefix in front. The prefix is "A" or
@@ -92,7 +94,9 @@ export function revealOrderOnlyToOwner(
 // src/erp-client.ts implements it over HTTP; an entry point builds that
 // client from ERP_BASE_URL (src/config.ts), for the mock or a real ERP.
 export interface Erp {
-  findCustomerBySender(address: string): Promise<ErpAnswer<Customer>>;
+  findCustomerByEmailAddress(
+    senderEmailAddress: string,
+  ): Promise<ErpAnswer<Customer>>;
   getOrderStatus(orderNumber: string): Promise<ErpAnswer<Order>>;
 }
 
@@ -123,13 +127,13 @@ export type ErpStageResult =
  * (R-14). Lookups that fail are outcomes, not exceptions.
  */
 export async function runErpStage(
-  input: { senderAddress: string; orderNumbers: string[] },
+  input: { senderEmailAddress: string; orderNumbers: string[] },
   erp: Erp,
 ): Promise<ErpStageResult> {
   // An ErpAnswer<Customer>: found (with the customer as erpRecord),
   // not_found or unreachable.
-  const sender = await erp.findCustomerBySender(
-    normaliseSenderAddress(input.senderAddress),
+  const sender = await erp.findCustomerByEmailAddress(
+    normaliseEmailAddress(input.senderEmailAddress),
   );
   if (sender.kind === "not_found") return { kind: "unknown_sender" };
   if (sender.kind === "unreachable") return { kind: "unreachable" };

@@ -614,7 +614,7 @@ built from 4.3 on.
   Anthropic's terms a workflow (predefined code paths), shaped as prompt
   chaining with a code step between model requests.
 - Two ERP functions in Module 4 (mock ERP, 4.3):
-  - findCustomerBySender: every email (R-14). The match ignores case; a
+  - findCustomerByEmailAddress: every email (R-14). The match ignores case; a
     customer number in the text identifies nobody.
   - getOrderStatus: every recorded order number when the sender is assigned
     to a customer, whatever the intent (R-15). Five digits with "A-", "a-",
@@ -816,7 +816,7 @@ einkauf@/m.weber@alpha.example, K-20002 with bestellung@beta.example,
 A-10001 to A-10003). No API call, no server.
 
 - Pure functions:
-  - `normaliseSenderAddress`: R-14, the address in lower case (the ERP
+  - `normaliseEmailAddress`: R-14, the address in lower case (the ERP
     stores lower case and compares exactly). Expects the bare address;
     taking it out of a "Name <address>" header belongs to ingestion
     (Module 7).
