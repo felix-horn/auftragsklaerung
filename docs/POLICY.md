@@ -1,7 +1,7 @@
 # Auftragsklärung — Fachliche Regeln
 
-**Version:** v1.8
-**Stand:** 28.10.2026
+**Version:** v1.9
+**Stand:** 06.11.2026
 
 ## Zweck dieses Dokuments
 
@@ -685,6 +685,10 @@ mindestens mittel, wenn ein Auftrag, zu dem der Abgleich Angaben ergeben hat
 - noch nicht versandt ist und die Nachricht der Kategorie Stornierung
   angehört (Stornierung vor dem Versand).
 
+Ob ein Auftrag versandt oder geliefert ist, ergibt sich aus seinem Status.
+Ein Versanddatum ändert daran nichts, auch wenn es zum Status nicht passt;
+der Bearbeiter sieht beide Angaben (R-16).
+
 Hoch bleibt hoch. Merkmale addieren sich nicht: treffen beide zu, ergibt das
 mittel, nicht hoch. Die Dringlichkeit der Nachricht nach R-13 bleibt daneben
 bestehen; sie beschreibt die Nachricht allein.
@@ -698,8 +702,13 @@ Beispiele:
 - Anfrage zum Stand von A-70214. Zugesagt war die Lieferung bis zum 06.06.,
   der Abgleich findet am 10.06. statt, geliefert wurde nicht. — Mindestens
   mittel.
+- Anfrage zum Stand von A-70214. Zugesagt war die Lieferung bis zum 06.06.,
+  der Abgleich findet am 06.06. statt. — Keine Anhebung: der Termin ist erst
+  am 07.06. verstrichen.
 - Stornierung von A-70214, der Auftrag ist noch in Bearbeitung. — Mindestens
   mittel.
+- Stornierung von A-70214, der Auftrag ist in Bearbeitung, hat aber bereits
+  ein Versanddatum. — Mindestens mittel: maßgeblich ist der Status.
 - Dieselbe Stornierung mit „bitte bestätigen Sie bis Freitag“, nach R-13
   bereits mittel. — Bleibt mittel.
 - Stornierung eines bereits versandten Auftrags. — Keine Anhebung.
@@ -715,7 +724,7 @@ Eine Stornierung vor dem Versand verlangt eine Reaktion vor einem bestimmten
 Zeitpunkt, dem Versand. Hoch bleibt den Lagen vorbehalten, die R-13 dafür
 nennt.
 
-**Seit:** v1.4
+**Seit:** v1.4, geändert in v1.9
 
 ---
 
@@ -796,3 +805,4 @@ Bewusst nicht geregelt, jeweils mit Begründung.
 | v1.6 | 21.10.2026 | R-15: Eine Auftragsnummer mit klein geschriebenem Präfix oder ohne Bindestrich wird als „A-“ mit fünf Ziffern abgefragt. Keine Bewertung betroffen. |
 | v1.7 | 22.10.2026 | R-14: Ist der Auftragsbestand bei der Zuordnung nicht erreichbar, wird „Auftragsbestand nicht erreichbar.“ festgehalten und nichts abgefragt. Keine Bewertung betroffen. |
 | v1.8 | 28.10.2026 | Abgleich mit dem Auftragsbestand: Als nicht erreichbar gilt der Auftragsbestand auch, wenn er nicht rechtzeitig antwortet oder seine Antwort nicht in der vereinbarten Form vorliegt; aus einer solchen Antwort wird nichts festgehalten (R-14, R-16). Beispiel und Begründung in R-16 ergänzt. Keine Bewertung betroffen. |
+| v1.9 | 06.11.2026 | R-17: Ob ein Auftrag versandt oder geliefert ist, ergibt sich aus seinem Status, nicht aus dem Versanddatum. Beispiele für einen Abgleich am Tag der Zusage und für ein Versanddatum, das nicht zum Status passt, ergänzt. Keine Bewertung betroffen. |
