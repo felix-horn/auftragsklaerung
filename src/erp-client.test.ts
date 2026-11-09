@@ -185,8 +185,8 @@ test("an existing order: found, with the order, whoever owns it", async () => {
     kind: "found",
     erpRecord: data.orders[0],
   });
-  // The client doesn't decide who may see an order: R-16 is
-  // revealOrderOnlyToOwner's job.
+  // The client doesn't decide who may see an order: showing an order only
+  // to its customer (R-16) is revealOrderOnlyToOwner's job.
   expect(await erp.getOrderStatus("A-10003")).toEqual({
     kind: "found",
     erpRecord: data.orders[1],

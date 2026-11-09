@@ -11,9 +11,10 @@ import type { Erp, ErpAnswer } from "./erp-stage.js";
 
 // The ERP over HTTP: the Erp interface (src/erp-stage.ts) for a real ERP
 // or the mock ERP, whichever answers at the base URL. It carries requests
-// and translates answers into ErpAnswer; the rules R-14 to R-16 stay in
-// src/erp-stage.ts. The ERP's paths and answers are those of its OpenAPI
-// document, contracts/erp-api.json.
+// and translates answers into ErpAnswer; the rules on who is asking and
+// what they may see (R-14 to R-16) stay in src/erp-stage.ts. The ERP's
+// paths and answers are those of its OpenAPI document,
+// contracts/erp-api.json.
 
 // How long one lookup may take, from sending the request to the last byte
 // of the answer. The mock ERP answers in a few milliseconds; an ERP that
@@ -72,8 +73,8 @@ export type ErpClientOptions = {
  * answer in time, another status, a body that isn't JSON, a body that
  * breaks the contract (including a 404 with another body, such as the mock
  * ERP's "no such endpoint" for a wrong base URL). A reply that says nothing
- * reliable about the customer or order must never look like a missing one
- * (POLICY.md R-14, R-16).
+ * reliable about the customer or order must never look like a missing one:
+ * not like an unknown sender (R-14), not like a refused order (R-16).
  */
 export function createErpClient({
   baseUrl,

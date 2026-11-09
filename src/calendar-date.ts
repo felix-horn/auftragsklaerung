@@ -13,8 +13,9 @@ const germanCalendar = new Intl.DateTimeFormat("en-US", {
 
 /**
  * The calendar day in Germany at the given instant, as "YYYY-MM-DD", the
- * form of the ERP's dates. R-17's "Tag des Abgleichs" is this day: an entry
- * point passes `toCalendarDateInGermany(new Date())` as the lookup day.
+ * form of the ERP's dates. The urgency after the lookup reads this day as
+ * the day of the lookup (R-17, „Tag des Abgleichs“): an entry point
+ * passes `toCalendarDateInGermany(new Date())` as the lookup day.
  *
  * Not `instant.toISOString().slice(0, 10)`: that is the day in UTC, which at
  * 00:30 in Germany is still the day before (until 01:00 in winter, until

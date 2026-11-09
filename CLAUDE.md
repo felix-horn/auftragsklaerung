@@ -237,8 +237,8 @@ fake fetch (no API), or in a real run of a 04_module/ script.
   reads without POLICY.md; POLICY.md is for a rule's exact wording and
   edge cases. No rule titles: they are German, and some only name a topic
   (R-13 „Dringlichkeit“). Test names keep `R-15: <what happens>`, complete
-  after the colon. From 4.7 on for new code and new CLAUDE.md text; older
-  comments change in one comments-only commit (4.9).
+  after the colon. Older comments were reworded in 4.7 (one comments-only
+  commit); CLAUDE.md's own older text was not, new text follows the rule.
 - Exported functions get a JSDoc comment (`/** … */`), so VS Code shows it
   on hover. New and rewritten functions get one; older functions when they
   are next rewritten, not for a rename.

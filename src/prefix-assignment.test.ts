@@ -2,7 +2,8 @@ import { expect, test } from "vitest";
 import { goldenCases } from "../evals/golden/cases.js";
 import { assignIdentifiersByPrefix } from "./prefix-assignment.js";
 
-// Part 1: invented numbers, shaped like R-09's examples. None is copied from
+// Part 1: invented numbers, shaped like the examples in the rule on order
+// and customer numbers (R-09). None is copied from
 // the golden set.
 
 test("Stufe 1: a K- number filed as an order number moves to customer numbers", () => {
@@ -78,8 +79,9 @@ test("the same number in both lists ends up twice: nothing is merged", () => {
   });
 });
 
-// Part 2: the golden labels already follow R-09, so the function must leave
-// every one of them unchanged.
+// Part 2: the golden labels already put every prefixed number where its
+// prefix says (R-09), so the function must leave every one of them
+// unchanged.
 
 for (const goldenCase of goldenCases) {
   const labels = goldenCase.labels;

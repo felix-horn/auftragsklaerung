@@ -20,7 +20,8 @@ for (const goldenCase of goldenCases) {
   });
 }
 
-// R-13: "Eine wiederholte Kontaktaufnahme mit Frist bleibt mittel."
+// An example in the urgency rule (R-13): "Eine wiederholte
+// Kontaktaufnahme mit Frist bleibt mittel."
 // No golden case has exactly this combination. Invented input, not from the golden set.
 test("R-13: repeated contact with a deadline stays medium", () => {
   const urgency = deriveMessageUrgency({
@@ -30,7 +31,7 @@ test("R-13: repeated contact with a deadline stays medium", () => {
   expect(urgency).toBe("medium");
 });
 
-// R-17: urgency after the lookup. Invented records, as in
+// The urgency after the lookup (R-17). Invented records, as in
 // src/erp-stage.test.ts (customer K-20001, orders A-10001 to A-10003).
 // None is copied from the golden set, from POLICY.md or from
 // mock-erp/data.json. No server, no API call.
@@ -89,7 +90,7 @@ function withData(order: Order): OrderOutcome {
   return { kind: "order", order };
 }
 
-// R-17, überschrittene Zusage: the date boundary
+// An overdue promise (R-17): the date boundary
 
 test("R-17: a promise is overdue from the day after the promised date", () => {
   expect(isPromiseOverdue(orderInProgress, AFTER_PROMISE)).toBe(true);
@@ -131,7 +132,7 @@ test("R-17: an order without a promised date has no overdue promise", () => {
   expect(isPromiseOverdue(withoutPromise, AFTER_PROMISE)).toBe(false);
 });
 
-// R-17, the whole rule
+// The urgency after the lookup, the whole rule (R-17)
 
 test("R-17: an overdue promise raises low to medium", () => {
   expect(

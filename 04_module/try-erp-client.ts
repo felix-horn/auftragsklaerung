@@ -22,18 +22,18 @@ const erp = createErpClient({
 });
 
 const lookups = [
-  // A contact of K-51320, written with capitals (R-14 ignores case), asks
-  // about its two orders; "44100" without prefix (R-15).
+  // A contact of K-51320, written with capitals (case is ignored, R-14),
+  // asks about its two orders; "44100" without prefix gets "A-" (R-15).
   {
     senderEmailAddress: "L.Vogt@kessler-fluidtechnik.example",
     orderNumbers: ["A-44821", "44100"],
   },
-  // A contact of K-58047 asks about K-51320's order (R-16).
+  // A contact of K-58047 asks about K-51320's order: refused (R-16).
   {
     senderEmailAddress: "bestellung@wendt-maschinenbau.example",
     orderNumbers: ["A-44821"],
   },
-  // An address no customer has (R-14).
+  // An address no customer has: unknown sender (R-14).
   { senderEmailAddress: "info@unbekannt.example", orderNumbers: ["A-44821"] },
 ];
 

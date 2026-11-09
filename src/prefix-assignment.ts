@@ -8,12 +8,12 @@ const CUSTOMER_NUMBER = /^K-\d{5}$/;
 
 /**
  * Corrects the extraction's assignment of numbers by their prefix (R-09,
- * Stufe 1): a number with one of our prefixes goes where the prefix says,
- * whatever the customer called it. "A-10001" goes to orderNumbers,
- * "K-20001" to customerNumbers. Every other number stays where the model
- * put it: Stufe 2 and 3 depend on the words around the number, which only
- * the model sees. Changes only which list a number is in; nothing is
- * added, removed or merged.
+ * Stufe 1: the prefix decides): a number with one of our prefixes goes
+ * where the prefix says, whatever the customer called it. "A-10001" goes
+ * to orderNumbers, "K-20001" to customerNumbers. Every other number stays
+ * where the model put it: Stufe 2 and 3 depend on the words around the
+ * number, which only the model sees. Changes only which list a number is
+ * in; nothing is added, removed or merged.
  *
  * TODO(Module 5): try inside extractEmail, as the experiment "Prefix
  * assignment" (CLAUDE.md, Open experiments).

@@ -1,6 +1,8 @@
 import type { Customer, Order } from "./erp-contract.js";
 
-// Rules of the ERP stage (POLICY.md R-14 to R-16; CLAUDE.md, ERP stage).
+// Rules of the ERP stage (CLAUDE.md, ERP stage): who is asking, found by the
+// sender address (R-14); which extracted numbers are looked up (R-15); what
+// the asking customer may see (R-16).
 // They belong to our code, not to the ERP: the ERP compares addresses
 // exactly, never adds "A-" and returns any order to any caller (CLAUDE.md,
 // Mock ERP).
@@ -30,7 +32,9 @@ const LOOKUP_FORM = /^([Aa]-?)?\d{5}$/;
  * Every number in LOOKUP_FORM is looked up as "A-" plus its five digits.
  *
  * Limit: five digits without prefix are looked up even when the extraction
- * should not have extracted them (R-09, Stufe 3 instead of Stufe 2). Telling
+ * should not have extracted them: a bare number the customer doesn't call
+ * an order is not recorded (R-09, Stufe 3), only one he calls an order is
+ * (Stufe 2). Telling
  * the two apart needs the words around the number, which only the model
  * sees.
  */
@@ -42,8 +46,8 @@ export function normaliseOrderNumber(
 }
 
 // What the ERP answered to one lookup. "unreachable" stands for every way
-// the ERP can fail to answer. As a value, not an exception: R-16 makes it an
-// outcome of its own.
+// the ERP can fail to answer. As a value, not an exception: an unreachable
+// ERP is an outcome of its own, with its own text for the clerk (R-16).
 // Which failures are "unreachable" is decided in src/erp-client.ts; it
 // reports their details to the entry point, never in this value, so they
 // cannot reach the clerk (POLICY.md v1.8: an unusable answer counts as
@@ -101,7 +105,8 @@ export interface Erp {
 }
 
 // One extracted order number and its outcome. The number stays as the
-// extraction wrote it (R-15, R-02).
+// extraction recorded it, in the email's own form (R-02); only the lookup
+// adds "A-" (R-15).
 export type OrderLookup = {
   extractedOrderNumber: string;
   outcome: OrderOutcome;
@@ -118,9 +123,9 @@ export type ErpStageResult =
   | { kind: "assigned"; customerNumber: string; orders: OrderLookup[] };
 
 /**
- * The ERP stage (POLICY.md R-14 to R-16): finds the asking customer by the
- * sender address, then looks up every extracted order number and decides
- * what may be shown.
+ * The ERP stage: finds the asking customer by the sender address (R-14),
+ * then looks up every extracted order number (R-15) and decides what may
+ * be shown (R-16).
  *
  * Takes only the sender address and the extracted order numbers. Customer
  * numbers from the email are not an input, so they can't assign the sender
