@@ -13,6 +13,8 @@ Answers about this project that are worth keeping: how its parts work and why th
 
 Numbers and decisions have their home in `CLAUDE.md`. This file repeats some of them so that an entry can be read on its own, and every entry says when it was true. If this file disagrees with `CLAUDE.md` or the code, `CLAUDE.md` and the code are right, and this file needs updating.
 
+Entry numbers are IDs, like the rule IDs in `POLICY.md`: they are never renumbered, so a new entry under an older topic takes the next free number.
+
 **Every entry has**
 
 - the question, as its heading;
@@ -27,6 +29,7 @@ Numbers and decisions have their home in `CLAUDE.md`. This file repeats some of 
   1. What is promptfoo, and why do we use it?
   2. Why not just vitest?
   3. Why is `evals/` so big, and why does it need to be that complex?
+  6. What does the baseline do, and how is it updated after a change?
 - Golden set
   4. What is the difference between `POLICY.md` and `LABELLING.md`?
 - Extraction
@@ -311,6 +314,8 @@ So an experiment is ten runs before against ten runs after, judged check by chec
 | right 8 of 10 | right 3 of 10 or fewer | harmed (4 or more could be chance) |
 | right 7 of 10 | right 5 of 10 | can't tell; it would need more runs |
 
+The whole table, and the steps of an experiment, are in entry 6.
+
 `report.ts` calls no API; it only reads an export:
 
 ```bash
@@ -366,6 +371,173 @@ So the gate gets stricter as fixes land: a check that is right in every run of a
 **Recap in technical terms.** The golden dataset is schema-validated on load. The equivalence rules are an order-insensitive multiset comparison for lists, presence-then-containment for quoted spans, presence only for free text, and a derived field recomputed from the model's output. Harness errors are kept apart from model failures, so failures never leave the denominator. Repeated trials classify every check as stable, consistently failing or flaky, and experiments are judged per check with Fisher's exact test. The CI gate is a regression gate against a stored baseline that guards only checks with a perfect baseline record: a ratchet that tightens as fixes are adopted, with flaky checks quarantined from the verdict.
 
 **As of** 04.11.2026, Module 4. Line counts: `wc -l` in `evals/` on that date. Baseline numbers: `CLAUDE.md` (Observed numbers; Noise and comparing runs). Gate behaviour: `CLAUDE.md` (CI) and `evals/gate.ts`. The E-10 demonstration: the roadmap, Module 3.
+
+---
+
+### 6. What does the baseline do, and how is it updated after a change?
+
+**In short.** The baseline is ten eval runs of the unchanged pipeline. It answers two different questions with two different tools. The CI gate asks "did a check break that never broke before?": it guards the 165 of 176 checks that were right in all ten runs, from one eval run. An experiment asks "did my change make a check better or worse?": it runs ten times and compares each check with its ten baseline runs, using a lookup table worked out once with Fisher's exact test. The table exists because intuition fails here: 4 of 10 after 0 of 10 is a real fix, but 7 of 10 after 4 of 10 happens by chance almost one time in five. When a change is adopted, its ten runs replace the baseline in the same commit.
+
+**In detail**
+
+**What the baseline holds.** One promptfoo export, `evals/baseline/eval-3.7-repeat10.json`: ten runs of all 22 golden emails, made on 02.10.2026 in Module 3.7. For each of the 176 checks (one assertion on one email), it gives how often that check was right:
+
+| Group | Checks | Which |
+|---|---|---|
+| right in all 10 runs | 165 | everything not listed below |
+| wrong in all 10 runs | 6 | E-07 `orderNumbers`, E-14 `requestedAction`, E-16 `intents`, E-18 `intents`, E-21 `orderNumbers`, E-21 `customerNumbers` |
+| sometimes right | 5 | E-08 `deadlineStated` 8/10, E-12 `intents` 7/10, E-12 `orderNumbers` 8/10, E-12 `deadlineStated` 4/10, E-17 `intents` 8/10 |
+
+The unit is a check, not a field. No field is left out as a whole. `orderNumbers`, for example, is right in all ten runs on 19 emails and is guarded there; only on E-07, E-12 and E-21 is it not.
+
+**Tool 1: the CI gate.** One eval run after every push and every night. The gate grades all 176 checks, as every eval run does, and sorts every wrong one:
+
+| The check is wrong now, and in the baseline it was | Gate |
+|---|---|
+| right in all 10 runs (one of the 165) | red |
+| wrong in all 10 runs | listed in the log, doesn't decide |
+| sometimes right | listed in the log, doesn't decide |
+
+So the 11 are checked in every CI run and shown, but they can't turn it red. The rule is that simple on purpose. Entry 3, part 4, explains why a threshold on the total can't work instead.
+
+What the gate can't see:
+
+- **A wobbling check getting worse.** Say a change takes E-17 `intents` from 8 of 10 to 4 of 10. Most CI runs stay green, because a wrong E-17 `intents` is normal wobble.
+- **An improvement.** If E-07 `orderNumbers` started coming out right, nothing would happen.
+
+Both need tool 2.
+
+**Tool 2: the ten-run comparison, for experiments.** An experiment changes one thing, such as one sentence in the system prompt, runs the eval ten times, and compares each check with the baseline. The question per check: if the change had done nothing, how likely is a difference at least this big, by chance alone? If that is less than 1 time in 20, it counts.
+
+Why that question needs a calculation, with real baseline numbers and invented experiment results:
+
+| Check | Baseline | Experiment | How often chance alone does this | Counts? |
+|---|---|---|---|---|
+| E-07 `orderNumbers` | 0/10 | 4/10 | 4.3 % | yes: fixed |
+| E-07 `orderNumbers` | 0/10 | 3/10 | 10.5 % | no |
+| E-12 `deadlineStated` | 4/10 | 10/10 | 0.5 % | yes: fixed |
+| E-12 `deadlineStated` | 4/10 | 7/10 | 18 % | no, although 7 is clearly more than 4 |
+| E-08 `deadlineStated` | 8/10 | 10/10 | 24 % | no, although 10/10 looks perfect |
+
+How the first row is worked out. Put the 20 results in a bag: 4 right, 16 wrong. If the change did nothing, it is luck which 10 of them belong to the experiment. The chance that all 4 right ones land in the experiment's 10 is 10/20 × 9/19 × 8/18 × 7/17 = 4.3 %. That way of counting is Fisher's exact test.
+
+**You never do that calculation.** It was done once, in Module 3.7, for every possible pair of "baseline right k of 10" and "experiment right k of 10". The result is a table in `CLAUDE.md` (Noise and comparing runs), and using it means looking up two numbers:
+
+| Baseline right | Counts as better from | Counts as worse at |
+|---|---|---|
+| 0/10 | 4/10 | – |
+| 1/10 | 6/10 | – |
+| 2/10 | 7/10 | – |
+| 3/10 | 8/10 | – |
+| 4/10 | 9/10 | 0/10 |
+| 5/10 | 10/10 | 0/10 |
+| 6/10 | 10/10 | 1/10 |
+| 7/10 | cannot be shown | 2/10 |
+| 8/10 | cannot be shown | 3/10 |
+| 9/10 | cannot be shown | 4/10 |
+| 10/10 | – | 6/10 |
+
+"–" means no result counts. Three rows to read carefully:
+
+- **0/10:** a check the model never got right counts as fixed from 4 of 10. Most planned experiments aim at such checks.
+- **7/10 to 9/10:** ten runs can't prove an improvement. It would take about 25 runs on each side. Experiments on these checks can only show harm.
+- **10/10:** an always-right check counts as harmed only at 6 of 10 or below. One to three misses can't be told apart from chance, so their answers get read, but they don't decide.
+
+**The two tools side by side:**
+
+| | CI gate | Ten-run comparison |
+|---|---|---|
+| Question | Did a check break that never broke? | Did this change make a check better or worse? |
+| Runs | 1 (22 API calls, about 12.5 US cents) | 10 (220 API calls, about 1.25 USD) |
+| When | every push, every night | by hand, for each experiment and after a red CI run |
+| Judges | the 165 guarded checks | every check |
+| Rule | wrong now, right in every baseline run → red | the table |
+| Code | `evals/gate.ts`, `evals/gate-cli.ts` | none: `evals/report.ts` gives the counts, the table is in `CLAUDE.md` |
+
+**Why the code is still the size it is.** The last row matters: the part that sounds complicated, Fisher's exact test, is no code at all. The code goes into getting the counts right and into refusing to judge when a comparison would be wrong. Each piece guards against a verdict that would look fine and be wrong:
+
+| Piece | What would go wrong without it |
+|---|---|
+| reading the promptfoo export with a Zod schema (`gate.ts`, `report.ts`) | A promptfoo upgrade changes the export format, and the gate could find no wrong checks and say green. With the schema, it fails loudly. |
+| no verdict when any email is an ERROR | An API failure on 5 emails leaves them without results. Without the refusal, they hold no wrong check, so the run looks green. |
+| no verdict when an email has more than one result | Someone passes a ten-run export to the gate. It would judge ten runs as if they were one. |
+| no verdict when emails or labels differ from the baseline's | A label is corrected after the baseline was made. The baseline's "right in 10 of 10" was graded against the old label, so it means nothing for the new one. |
+| adding up several baseline files | Needed after a false alarm (below): the red run's own result must be able to join the baseline. |
+| listing every wrong check with the model's answer and the label | A red run should show at once what broke, without opening the export. |
+| `gate.test.ts`, 135 lines | Each rule above is pinned by a test, so a later edit can't quietly remove it. |
+| `report.ts`, 265 lines | The counts per check that the table needs, the totals per run, and the intent confidences next to the labels (the Module 3.7 confidence check). promptfoo's view shows none of these per email over ten runs. |
+
+**When the baseline changes, and how.** Four situations. Only the second and third replace the baseline.
+
+**A. A change that shouldn't change any answer,** such as a refactor, a new test or a comment outside the prompt.
+
+1. Push. CI runs against the current baseline.
+2. Green: done. Red: your change is the first suspect. Read the failed check and the model's answer in the log; if the change can't have caused it, treat it as D.
+
+A change to the system prompt, `src/schema.ts` or a generation parameter never belongs here, however small, even a typo fix in a `.describe()` sentence. Each of those is prompt text (entry 5), so it goes through B.
+
+**B. A change meant to improve answers: an experiment.**
+
+1. On a branch, make one change. Fix its wording before the run. A rule goes in general words, taken from `POLICY.md`; never golden-email text or `POLICY.md` examples, or the experiment measures copying.
+2. Dump the request body and diff it, so you know exactly what changed on the wire:
+
+```bash
+DUMP_REQUEST_BODY=docs/request-body-reference.json npm run dump
+git diff docs/request-body-reference.json
+```
+
+3. Push the branch. The CI run compares one run against the old baseline. If it is red, a guarded check broke, and you know before spending 1.25 USD.
+4. Run the eval ten times, with 0 ERRORs, and export it:
+
+```bash
+npm run eval -- --repeat 10
+```
+
+5. Get the counts per check from that export:
+
+```bash
+npm run eval:report -- <export.json>
+```
+
+6. Judge the target checks with the table: better, or not shown.
+7. Look for side effects: every check that was 10/10 in the baseline and isn't now gets its answers read. At 6/10 or below, it counts as harmed.
+8. Adopt or reject. Adopt: one commit on `main` with the change, the new request-body reference, the experiment's ten-run export **replacing** everything in `evals/baseline/`, and the result in `CLAUDE.md` (Open experiments). The CI run of that commit then compares against the new baseline. Reject: record the result in `CLAUDE.md` and drop the branch; the baseline stays.
+
+Why replace, not add:
+
+- **The old runs measured a different pipeline.** Mixed in, they blur both. An invented example: the change makes E-07 `orderNumbers` right in 10 of 10. Added to the old baseline, it would be right in 10 of 20, so it wouldn't be guarded, and the next break of E-07 would go unnoticed. Replaced, it is 10 of 10, guarded from now on.
+- **The next experiment must change one thing.** Compared with the old baseline, it would measure two changes at once, its own and the adopted one.
+
+That is also how the gate gets stricter over time: every check a fix brings to 10 of 10 joins the guarded ones. A fix that only reaches, say, 7 of 10 makes that check wobbling: better, but not guarded.
+
+**C. A change to the golden set: a label or an email.** For example, a `POLICY.md` change that moves a label, or a new golden email such as the E-23 Module 4 plans.
+
+1. The order is fixed: `POLICY.md` first, with a version bump; then the label; never the other way round.
+2. The gate now gives no verdict (exit code 2), because the baseline was graded against other labels or emails.
+3. Run the unchanged pipeline ten times against the new golden set and let that export replace `evals/baseline/`, in the same commit as the label or email change.
+
+**D. Red, although nothing changed.** For example, a nightly run on an unchanged `main`. The gate is an alarm, not a verdict: a guarded check can fail once by chance. An example: if 1 of 11 results is wrong and nothing changed, the wrong one lands in the new run 1 time in 11, about 9 %.
+
+1. Run the eval ten times by hand and look the check up in the table. For a 10/10 check, harmed means 6 of 10 or below.
+2. Not harmed: add **two** files to `evals/baseline/` in one commit, the ten-run export and the red run's own `eval-result.json`, downloaded from the run's page on GitHub (Artifacts). The red run is the only evidence that the check can fail. A check that fails about 1 time in 30 still comes back 10 of 10 in ten new runs about 70 % of the time. With the ten-run file alone it would stay guarded (20 of 20), and the same false alarm could repeat. With both files it is 20 of 21, no longer guarded.
+3. Green nightly runs are never added. They contain no wrong guarded check, so they would change no verdict.
+
+The rules cover the "not harmed" case. I found no written rule for a check that comes out harmed with no code changed, which would mean the model's behaviour changed on Anthropic's side.
+
+**Where this is written down.** The rules are in `CLAUDE.md`, spread over four sections:
+
+| Section in `CLAUDE.md` | What it holds |
+|---|---|
+| Noise and comparing runs (Module 3.7) | the table; one eval with `--repeat 10` per experiment; how target checks and side effects are judged; that the boxes and totals never decide |
+| CI (Module 3.8) | what the gate does; the `evals/baseline/` rules: files are added up, the two files after a false alarm, replacement on adoption, a new baseline after a label or email change |
+| Open experiments | the planned experiments with their targets and baseline counts, and that each is judged against the current baseline |
+| Conventions | the dump-and-diff after a change to the prompt, the schema or a generation parameter; `POLICY.md` before labels |
+
+The roadmap's Module 5 lists which three experiments run first and in what order. The steps above, as one sequence, are only in this entry. The rules in `CLAUDE.md` are the ones that count.
+
+**Recap in technical terms.** The baseline is a repeated-trials measurement of the unchanged pipeline: per-check pass rates over ten runs. The CI gate is a regression gate guarding only the checks with a perfect baseline record; flaky and consistently failing checks are reported but quarantined from the verdict. Experiments are A/B comparisons, ten runs against ten, judged per check with one-sided Fisher's exact test at α = 0.05, precomputed into a decision table. Adopting a change replaces the baseline atomically with the experiment's runs, so the gate ratchets: fixes become guarded. Changes to the golden set invalidate the baseline, and the gate refuses to judge until it is re-measured. A false alarm on an unchanged pipeline is resolved by re-measuring and adding the alarm run itself to the baseline.
+
+**As of** 08.11.2026, Module 4. The baseline from 02.10.2026, as recorded at the end of Module 3. Table and experiment rule: `CLAUDE.md`, Noise and comparing runs. Gate and baseline rules: `CLAUDE.md`, CI, including the two-file rule added in Module 3.9. The order of steps in B is put together from those rules and the roadmap's Module 5; it isn't written as a sequence anywhere else. Not checked against the current files.
 
 ---
 
