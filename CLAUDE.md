@@ -6,7 +6,7 @@ German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
 ERP stage (Module 4) → (later) retrieval, reply drafts, approval queue; evals
 throughout. Built module by module.
 
-After Module 4.5 the two halves exist but are not joined yet:
+Since Module 4.5 the two halves exist but are not joined yet:
 
 - Extraction: src/extract.ts (`extractEmail`, one model request) →
   src/urgency.ts (`deriveUrgency`, R-13). Entry points: src/extract-golden-set.ts
@@ -15,10 +15,12 @@ After Module 4.5 the two halves exist but are not joined yet:
   (HTTP, see ERP client (Module 4.5)) or a fake; src/config.ts reads
   `ERP_BASE_URL`. Entry point: 04_module/try-erp-client.ts, with typed-in
   sender addresses and order numbers.
-- 4.6 adds R-17 (urgency after the lookup). 4.7 joins both halves in one
-  pipeline function (email text and sender address in) with a new entry
-  point; extract-golden-set.ts stays the extraction-only runner, because
-  the golden set has no sender addresses.
+- R-17 (Module 4.6): `deriveUrgencyAfterLookup` in src/urgency.ts reads
+  both halves' results and a lookup day passed in. Nothing calls it yet;
+  see Urgency after the lookup (Module 4.6).
+- 4.7 joins both halves in one pipeline function (email text and sender
+  address in) with a new entry point; extract-golden-set.ts stays the
+  extraction-only runner, because the golden set has no sender addresses.
 
 ## Stack facts — verified, do not re-derive
 
@@ -161,8 +163,8 @@ fake fetch (no API), or in a real run of a 04_module/ script.
   are sent to the model and all three can move a result.
 - The system prompt is `DEFAULT_SYSTEM` in src/extract.ts. Do not inline it again;
   source indentation inside a template literal is sent over the wire.
-- Urgency is derived in code (`deriveUrgency` in src/urgency.ts), never asked of the
-  model.
+- Urgency is derived in code (`deriveUrgency` and, after the ERP lookup,
+  `deriveUrgencyAfterLookup` in src/urgency.ts), never asked of the model.
 - The extraction records facts from the email. A decision that follows from
   recorded facts by a fixed rule is made in code, never asked of the model:
   urgency, and which ERP lookups run (see ERP stage). If a decision needs
@@ -773,7 +775,8 @@ Stands in for the company's ERP. Built in 4.3; our ERP client calls it from
   out). Done-when: E-06 from a Kessler address → A-44821's status; from
   Wendt's → „Kein Auftrag mit dieser Nummer für diesen Kunden.“ The promise
   date serves R-17 both ways, depending on the lookup date passed in (a
-  lookup on 2026-11-05: not overdue; on 2026-11-09: overdue). An unknown
+  lookup on 2026-11-05 or on the promised day 2026-11-06: not overdue; on
+  2026-11-07 or later: overdue, POLICY.md v1.9). An unknown
   sender is by definition not in the file.
 - What the seed covers: the client (4.5) and the end-to-end cases (4.7,
   4.8). The R-14 to R-17 situations are tested with in-memory fakes in vitest
@@ -983,6 +986,45 @@ Felix's Mac.
   the scheme "localhost:", so the protocol rule is what refuses it); a
   trailing slash is removed. dotenv never overrides a variable already set
   in the shell, so `ERP_BASE_URL=… npx tsx …` wins over .env.
+
+## Urgency after the lookup (Module 4.6)
+
+POLICY.md R-17 (v1.9) in src/urgency.ts, tested in src/urgency.test.ts
+(20 tests, invented records: K-20001's orders A-10001 to A-10003). No API
+call, no server.
+
+- `deriveUrgencyAfterLookup({ messageUrgency, intents, erpStageResult,
+  lookupDate })` returns one urgency. `messageUrgency` is R-13's result
+  (`deriveUrgency`); R-17 keeps it valid next to the raised one, so the
+  caller holds both (4.7). The whole `ErpStageResult` goes in, so the
+  "no raise" cases (unknown sender, ERP unreachable, refused, invalid and
+  unreachable lookups) are decided and tested in the function, not by the
+  caller.
+- Raised to medium (never to high; medium and high stay) when one order
+  with data (outcome `order`) has an overdue promise, or has the status
+  `in_progress` while `intents` contains `cancellation`. One qualifying
+  order among several is enough.
+- `isPromiseOverdue(order, lookupDate)`: a promised date exists, the
+  status is not `delivered` (`shipped` is not delivered), and the date is
+  before the lookup day. On the promised day itself: not overdue
+  (Felix's decision, POLICY.md v1.9).
+- Shipped or not is the status alone; `shippedOn` decides nothing
+  (Felix's decision, v1.9). The ERP's document does not tie the two
+  (ERP contract (Module 4.5)); the clerk sees both in the R-16 result.
+  Rejected: the shipping date deciding; raising when either field says
+  "not shipped"; treating a mismatch as „nicht erreichbar“ (the document
+  allows it, and a repeated lookup returns the same mismatch).
+- Dates are `YYYY-MM-DD` texts, the ERP's form. Year first and fixed width
+  make `<` on the texts compare the dates (tested across a month and a
+  year end). No date library: Node 24.21.0 has no `Temporal`.
+- The lookup day is passed in, never read inside, so tests and the 4.8
+  eval fix it. With the seed and the real date, E-06 from a Kessler
+  address changes from low to medium on 2026-11-07. The day is the
+  calendar day in Germany (Europe/Berlin): at 00:30 in Berlin, UTC still
+  names the day before (00:00–01:59 in summer). Computing it from the
+  clock is part 3 of 4.6; the entry point that calls it comes in 4.7.
+- Two mutations, each made once in a scratch copy: `<=` instead of `<`
+  failed 3 tests; `shippedOn === null` instead of the status failed 1.
 
 ## Open experiments
 
