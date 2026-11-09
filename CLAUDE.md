@@ -6,22 +6,25 @@ German B2B email triage ("Auftragsklärung"). Extraction → derived urgency →
 ERP stage (Module 4) → (later) retrieval, reply drafts, approval queue; evals
 throughout. Built module by module.
 
-Since Module 4.5 the two halves exist but are not joined yet:
+Since Module 4.7 one pipeline function joins the two halves:
 
+- Pipeline: src/process-email.ts (`processEmail`): email text, sender
+  address and lookup day in; the extraction, both urgencies and the ERP
+  stage result out. See Pipeline (Module 4.7). No entry point calls it
+  yet (4.7 part 3 adds one).
 - Extraction: src/extract.ts (`extractEmail`, one model request) →
   src/urgency.ts (`deriveUrgency`, R-13). Entry points: src/extract-golden-set.ts
   (`npm run extract:golden-set`) and the promptfoo provider.
+  extract-golden-set.ts stays the extraction-only runner, because the
+  golden set has no sender addresses.
 - ERP: src/erp-stage.ts (`runErpStage`, R-14 to R-16) with src/erp-client.ts
   (HTTP, see ERP client (Module 4.5)) or a fake; src/config.ts reads
   `ERP_BASE_URL`. Entry point: 04_module/try-erp-client.ts, with typed-in
   sender addresses and order numbers.
 - R-17 (Module 4.6): `deriveUrgencyAfterLookup` in src/urgency.ts reads
   both halves' results and a lookup day passed in; src/calendar-date.ts
-  turns an instant into that day. Nothing calls either yet; see Urgency
-  after the lookup (Module 4.6).
-- 4.7 joins both halves in one pipeline function (email text and sender
-  address in) with a new entry point; extract-golden-set.ts stays the
-  extraction-only runner, because the golden set has no sender addresses.
+  turns an instant into that day. processEmail calls
+  deriveUrgencyAfterLookup; see Urgency after the lookup (Module 4.6).
 
 ## Stack facts — verified, do not re-derive
 
@@ -197,8 +200,9 @@ fake fetch (no API), or in a real run of a 04_module/ script.
   received from other teams; docs/ our specifications and records;
   04_module/ teaching scripts. A file that belongs to two topics (R-17 reads
   extraction and ERP data) still has one role.
-- Pipeline code lives directly in src/ (urgency.ts, prefix-assignment.ts,
-  erp-stage.ts, erp-client.ts, calendar-date.ts). The golden set and the code that compares
+- Pipeline code lives directly in src/ (process-email.ts, urgency.ts,
+  prefix-assignment.ts, erp-stage.ts, erp-client.ts, calendar-date.ts).
+  The golden set and the code that compares
   model output with golden labels live in evals/golden/ (cases.ts, compare.ts,
   deadline.ts; moved from src/golden/ in 4.5) and are never called by the
   pipeline. Tests and entry points may import them (urgency.test.ts,
@@ -226,6 +230,15 @@ fake fetch (no API), or in a real run of a 04_module/ script.
   lists all of it. Work that waits for an outside event names the event:
   `// TODO(when @hey-api/openapi-ts supports TypeScript 7): …`
   (orval.config.ts).
+- A comment that cites a POLICY.md rule says in plain English what the rule
+  decides at that spot, then the ID in brackets as the pointer: "the
+  urgency of the message alone, from escalation signals and a stated
+  deadline (R-13)", never a bare "then R-13" or "(R-14 to R-16)". Code
+  reads without POLICY.md; POLICY.md is for a rule's exact wording and
+  edge cases. No rule titles: they are German, and some only name a topic
+  (R-13 „Dringlichkeit“). Test names keep `R-15: <what happens>`, complete
+  after the colon. From 4.7 on for new code and new CLAUDE.md text; older
+  comments change in one comments-only commit (4.9).
 - Exported functions get a JSDoc comment (`/** … */`), so VS Code shows it
   on hover. New and rewritten functions get one; older functions when they
   are next rewritten, not for a rename.
@@ -1037,6 +1050,47 @@ call, no server.
   tests.
 - Two mutations, each made once in a scratch copy: `<=` instead of `<`
   failed 3 tests; `shippedOn === null` instead of the status failed 1.
+
+## Pipeline (Module 4.7)
+
+src/process-email.ts, tested in src/process-email.test.ts (5 tests, a fake
+model request and a fake ERP; invented records as in src/erp-stage.test.ts).
+No API call, no server. The tests check the joining, which result goes
+where; the rules are tested next to their functions.
+
+- `processEmail({ emailText, senderEmailAddress, lookupDate },
+  { extractEmail, erp })` returns a `ProcessedEmail`: `extraction`,
+  `extractionUsage` (the request's tokens), `messageUrgency` (from
+  escalation signals and a stated deadline, R-13), `erpStageResult` (the
+  customer found by the sender address, R-14, and the outcome of each
+  extracted order number, R-15 and R-16) and `urgencyAfterLookup` (raised
+  by an overdue promise or a cancellation before shipping, R-17). Both
+  urgencies are kept: the urgency of the message alone stays valid next
+  to the raised one (R-17).
+- The model request and the ERP are passed in, the way runErpStage gets
+  its Erp (ERP stage rules (Module 4.4)). `ExtractEmail` is the shape of
+  extractEmail (email text in, `{ output, usage }` out); an entry point
+  passes extractEmail itself, tests pass a fake, so they need no API key.
+  src/extract.ts is unchanged.
+- One step after the other: extraction, urgency of the message, ERP
+  lookup, urgency after the lookup (Claude's call, 4.7). The order lookups need the extracted numbers; only the
+  sender lookup could run during the model request. Not done: it would
+  save milliseconds of ERP time next to seconds of model time, needs
+  runErpStage split in two, and would ask the ERP about emails whose
+  extraction then fails.
+- A failed extraction stops the pipeline: extractEmail's error comes
+  through unchanged (NoObjectGeneratedError, NoOutputGeneratedError, or
+  a network or key error) and no ERP lookup runs. POLICY.md puts the
+  Abgleich after the Bewertung, and the urgency after the lookup starts
+  from the urgency of the message (R-17). Never a
+  fallback extraction (Eval harness). What the clerk sees for such an
+  email is decided with Module 7's retries and dead letters, as a
+  POLICY.md question for Felix; until then only an entry point sees the
+  error.
+- Mutations, each made once in a scratch copy, each failed exactly one
+  test: customer numbers added to the order numbers; the urgency of the
+  message returned as the urgency after the lookup; a fixed lookup day instead
+  of the one passed in; a fallback extraction on failure.
 
 ## Open experiments
 
