@@ -16,8 +16,9 @@ Since Module 4.5 the two halves exist but are not joined yet:
   `ERP_BASE_URL`. Entry point: 04_module/try-erp-client.ts, with typed-in
   sender addresses and order numbers.
 - R-17 (Module 4.6): `deriveUrgencyAfterLookup` in src/urgency.ts reads
-  both halves' results and a lookup day passed in. Nothing calls it yet;
-  see Urgency after the lookup (Module 4.6).
+  both halves' results and a lookup day passed in; src/calendar-date.ts
+  turns an instant into that day. Nothing calls either yet; see Urgency
+  after the lookup (Module 4.6).
 - 4.7 joins both halves in one pipeline function (email text and sender
   address in) with a new entry point; extract-golden-set.ts stays the
   extraction-only runner, because the golden set has no sender addresses.
@@ -197,7 +198,7 @@ fake fetch (no API), or in a real run of a 04_module/ script.
   04_module/ teaching scripts. A file that belongs to two topics (R-17 reads
   extraction and ERP data) still has one role.
 - Pipeline code lives directly in src/ (urgency.ts, prefix-assignment.ts,
-  erp-stage.ts, erp-client.ts). The golden set and the code that compares
+  erp-stage.ts, erp-client.ts, calendar-date.ts). The golden set and the code that compares
   model output with golden labels live in evals/golden/ (cases.ts, compare.ts,
   deadline.ts; moved from src/golden/ in 4.5) and are never called by the
   pipeline. Tests and entry points may import them (urgency.test.ts,
@@ -1019,10 +1020,21 @@ call, no server.
   year end). No date library: Node 24.21.0 has no `Temporal`.
 - The lookup day is passed in, never read inside, so tests and the 4.8
   eval fix it. With the seed and the real date, E-06 from a Kessler
-  address changes from low to medium on 2026-11-07. The day is the
-  calendar day in Germany (Europe/Berlin): at 00:30 in Berlin, UTC still
-  names the day before (00:00–01:59 in summer). Computing it from the
-  clock is part 3 of 4.6; the entry point that calls it comes in 4.7.
+  address changes from low to medium on 2026-11-07.
+- The lookup day is the calendar day in Germany:
+  `toCalendarDateInGermany(instant)` in src/calendar-date.ts, tested in
+  src/calendar-date.test.ts (6 tests, fixed instants; they pass with the
+  machine's TZ set to Europe/Berlin, America/New_York or Asia/Tokyo). The
+  4.7 entry point passes `toCalendarDateInGermany(new Date())`; pipeline
+  code never reads the clock. Not `toISOString().slice(0, 10)`: that is
+  the UTC day, which at 00:30 in Germany still names the day before (from
+  00:00 to 00:59 in winter, to 01:59 in summer).
+- How: `Intl.DateTimeFormat` with `timeZone: "Europe/Berlin"` (Intl knows
+  when the clocks change) and `formatToParts`, which names year, month and
+  day. Not `format()` with a locale whose order happens to be
+  year-month-day: that order is locale data, not a promise of the API.
+  Mutation, once in a scratch copy: `timeZone: "UTC"` failed 4 of the 6
+  tests.
 - Two mutations, each made once in a scratch copy: `<=` instead of `<`
   failed 3 tests; `shippedOn === null` instead of the status failed 1.
 
