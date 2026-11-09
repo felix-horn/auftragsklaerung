@@ -4,7 +4,7 @@ import type { Order } from "./erp-contract.js";
 import type { ErpStageResult, OrderOutcome } from "./erp-stage.js";
 import type { EmailExtraction } from "./schema.js";
 import {
-  deriveUrgency,
+  deriveMessageUrgency,
   deriveUrgencyAfterLookup,
   isPromiseOverdue,
 } from "./urgency.js";
@@ -16,14 +16,14 @@ for (const goldenCase of goldenCases) {
   if (labels === null) continue; // not yet labelled: nothing to compare
 
   test(`${goldenCase.id}: urgency from labelled signals and deadline`, () => {
-    expect(deriveUrgency(labels)).toBe(labels.urgency);
+    expect(deriveMessageUrgency(labels)).toBe(labels.urgency);
   });
 }
 
 // R-13: "Eine wiederholte Kontaktaufnahme mit Frist bleibt mittel."
 // No golden case has exactly this combination. Invented input, not from the golden set.
 test("R-13: repeated contact with a deadline stays medium", () => {
-  const urgency = deriveUrgency({
+  const urgency = deriveMessageUrgency({
     escalationSignals: ["repeat_contact"],
     deadlineStated: "spätestens am 12.06.",
   });

@@ -13,7 +13,7 @@ Since Module 4.7 one pipeline function joins the two halves:
   stage result out. See Pipeline (Module 4.7). No entry point calls it
   yet (4.7 part 3 adds one).
 - Extraction: src/extract.ts (`extractEmail`, one model request) →
-  src/urgency.ts (`deriveUrgency`, R-13). Entry points: src/extract-golden-set.ts
+  src/urgency.ts (`deriveMessageUrgency`, R-13). Entry points: src/extract-golden-set.ts
   (`npm run extract:golden-set`) and the promptfoo provider.
   extract-golden-set.ts stays the extraction-only runner, because the
   golden set has no sender addresses.
@@ -167,7 +167,7 @@ fake fetch (no API), or in a real run of a 04_module/ script.
   are sent to the model and all three can move a result.
 - The system prompt is `DEFAULT_SYSTEM` in src/extract.ts. Do not inline it again;
   source indentation inside a template literal is sent over the wire.
-- Urgency is derived in code (`deriveUrgency` and, after the ERP lookup,
+- Urgency is derived in code (`deriveMessageUrgency` and, after the ERP lookup,
   `deriveUrgencyAfterLookup` in src/urgency.ts), never asked of the model.
 - The extraction records facts from the email. A decision that follows from
   recorded facts by a fixed rule is made in code, never asked of the model:
@@ -412,7 +412,7 @@ tested in the .test.ts file next to it.
   of writing.
 - `requestedAction`: present vs. null only (see Deferred design questions,
   assertion coverage).
-- `urgency`: `deriveUrgency` takes
+- `urgency`: `deriveMessageUrgency` takes
   `Pick<EmailExtraction, "escalationSignals" | "deadlineStated">`, so it accepts a
   golden label as well as a model output. Tested against every labelled case plus
   one hand-written R-13 case (repeated contact with a deadline stays medium) that
@@ -1009,7 +1009,7 @@ call, no server.
 
 - `deriveUrgencyAfterLookup({ messageUrgency, intents, erpStageResult,
   lookupDate })` returns one urgency. `messageUrgency` is R-13's result
-  (`deriveUrgency`); R-17 keeps it valid next to the raised one, so the
+  (`deriveMessageUrgency`); R-17 keeps it valid next to the raised one, so the
   caller holds both (4.7). The whole `ErpStageResult` goes in, so the
   "no raise" cases (unknown sender, ERP unreachable, refused, invalid and
   unreachable lookups) are decided and tested in the function, not by the

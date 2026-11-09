@@ -9,7 +9,7 @@ import {
 } from "../golden/case-schema.js";
 import { hasSameItems, intentTypes } from "../golden/compare.js";
 import { isDeadlineQuoteMatch } from "../golden/deadline.js";
-import { deriveUrgency } from "../../src/urgency.js";
+import { deriveMessageUrgency } from "../../src/urgency.js";
 
 // One assertion per labelled field.
 // The config loads each one by name (file://assertions/fields.ts:intents)
@@ -114,6 +114,6 @@ export const deadlineStated = fieldAssertion((extraction, labels) => {
 // Urgency is not a model field: the pipeline derives it from escalation
 // signals and deadline, so this measures what the queue would show.
 export const urgency = fieldAssertion((extraction, labels) => {
-  const got = deriveUrgency(extraction);
+  const got = deriveMessageUrgency(extraction);
   return graded(got === labels.urgency, show(got), show(labels.urgency));
 });

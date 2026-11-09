@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { NoObjectGeneratedError, NoOutputGeneratedError } from "ai";
 import { extractEmail } from "./extract.js";
-import { deriveUrgency } from "./urgency.js";
+import { deriveMessageUrgency } from "./urgency.js";
 import { goldenCases } from "../evals/golden/cases.js";
 
 let failures = 0;
@@ -12,7 +12,7 @@ for (const { id, email } of goldenCases) {
     console.log("Email text:", email);
     console.log("Returned `output` from `generateText`:", output);
     console.log("Returned `usage` from `generateText`:", usage);
-    console.log("Derived urgency:", deriveUrgency(output));
+    console.log("Derived urgency:", deriveMessageUrgency(output));
   } catch (error) {
     failures++;
     if (NoObjectGeneratedError.isInstance(error)) {

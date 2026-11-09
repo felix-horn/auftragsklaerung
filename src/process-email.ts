@@ -2,7 +2,7 @@ import type { LanguageModelUsage } from "ai";
 import { type Erp, type ErpStageResult, runErpStage } from "./erp-stage.js";
 import type { EmailExtraction } from "./schema.js";
 import {
-  deriveUrgency,
+  deriveMessageUrgency,
   deriveUrgencyAfterLookup,
   type Urgency,
 } from "./urgency.js";
@@ -71,7 +71,7 @@ export async function processEmail(
 
   const { output: extraction, usage: extractionUsage } =
     await extractEmail(emailText);
-  const messageUrgency = deriveUrgency(extraction);
+  const messageUrgency = deriveMessageUrgency(extraction);
 
   // The sender address and the extracted order numbers, nothing else:
   // customer numbers from the text never assign the sender (R-14).

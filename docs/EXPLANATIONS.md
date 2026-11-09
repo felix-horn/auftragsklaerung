@@ -144,7 +144,7 @@ npx promptfoo view
 
 ### 2. Why not just vitest?
 
-**In short.** We use both. vitest tests the code around the model: the comparison rules, `deriveUrgency`, the gate. That code gives the same answer every time and never calls an API. The extraction does neither: it calls the API, and with nothing changed its score moves between 145 and 148 of 154. Measuring that needs repeated runs, numbers per field and stored results, which is what promptfoo provides.
+**In short.** We use both. vitest tests the code around the model: the comparison rules, `deriveMessageUrgency`, the gate. That code gives the same answer every time and never calls an API. The extraction does neither: it calls the API, and with nothing changed its score moves between 145 and 148 of 154. Measuring that needs repeated runs, numbers per field and stored results, which is what promptfoo provides.
 
 **In detail**
 
@@ -163,12 +163,12 @@ The second row is the one that matters most. Think of a bathroom scale that show
 | Question | Tool | Why |
 |---|---|---|
 | Does `hasSameItems` treat `["A", "B"]` and `["B", "A"]` as the same list? | vitest | pure code, same answer every time |
-| Does `deriveUrgency` give the urgency `POLICY.md` asks for? | vitest | pure code; tested against all 22 golden urgency labels |
+| Does `deriveMessageUrgency` give the urgency `POLICY.md` asks for? | vitest | pure code; tested against all 22 golden urgency labels |
 | Does the gate turn red when a guarded check fails? | vitest | `gate.test.ts` uses invented emails (E-91, E-92), no API |
 | Does the model find the order number in E-07? | promptfoo | needs the model; in the baseline it never does (0 of 10 runs) |
 | Did this prompt change break something? | promptfoo and the gate | needs the model and a comparison with the baseline |
 
-The split also tells you where a failure comes from. The `urgency` check in the eval runs `deriveUrgency` on the model's answer. Because `deriveUrgency` itself is already tested with vitest on the golden labels, a wrong urgency in an eval run points at the model's escalation signals or deadline, not at the function.
+The split also tells you where a failure comes from. The `urgency` check in the eval runs `deriveMessageUrgency` on the model's answer. Because `deriveMessageUrgency` itself is already tested with vitest on the golden labels, a wrong urgency in an eval run points at the model's escalation signals or deadline, not at the function.
 
 The vitest files in `evals/` test the measuring instrument itself: `golden/compare.test.ts`, `golden/deadline.test.ts`, `assertions/fields.test.ts` and `gate.test.ts`, 414 lines together. They run with `npm test`, cost nothing, and run in every CI run before the eval run.
 
@@ -256,7 +256,7 @@ A real case of an invented deadline: on 07.10.2026, on a throwaway branch, remov
 **Two fields are compared differently on purpose.**
 
 - **`requestedAction` is compared as present or absent only.** A label with an action and an answer with any action is right. A label without one and an answer with one is wrong. The wording isn't compared, so an invented detail inside a stated action passes; `CLAUDE.md` records this gap in its rule coverage.
-- **`urgency` is not something the model answers.** The check runs `deriveUrgency` on the model's escalation signals and deadline and compares the result with the label. So it measures what the approval queue would show. A wrong deadline can therefore fail two checks at once, as it did for E-10.
+- **`urgency` is not something the model answers.** The check runs `deriveMessageUrgency` on the model's escalation signals and deadline and compares the result with the label. So it measures what the approval queue would show. A wrong deadline can therefore fail two checks at once, as it did for E-10.
 
 #### Part 2: How is a broken answer counted?
 
@@ -655,7 +655,7 @@ In English: write only the time expression with the word that introduces it, wor
 
 | Part | What it holds |
 |---|---|
-| one convention per field | `intents`: a set of code values, at least one, no duplicates, no confidence. `requestedAction`: a short German summary with the verb at the end, such as „Liefertermin mitteilen", or `null` as R-06 and R-07 say. `orderNumbers`, `customerNumbers`: the number exactly as written, without the words around it, and no missing prefix added. `escalationSignals`: a set of code values. `deadlineStated`: as above. `urgency`: by hand, following R-13, never computed with `deriveUrgency`. |
+| one convention per field | `intents`: a set of code values, at least one, no duplicates, no confidence. `requestedAction`: a short German summary with the verb at the end, such as „Liefertermin mitteilen", or `null` as R-06 and R-07 say. `orderNumbers`, `customerNumbers`: the number exactly as written, without the words around it, and no missing prefix added. `escalationSignals`: a set of code values. `deadlineStated`: as above. `urgency`: by hand, following R-13, never computed with `deriveMessageUrgency`. |
 | code values are names, not definitions | `purchase_inquiry` is a label for the category Kaufanfrage; what belongs in it is decided by `POLICY.md`. For example, an inquiry from an existing customer is a Kaufanfrage too. |
 | `policyVersion` and `notes` | `policyVersion` is the `POLICY.md` version a case was last checked against, raised on a recheck even if no label moves. `notes` are optional: a rule ID and a short German reason, only where the annotator hesitated. |
 | Zweifelsfälle | The three-way decision above: in the policy but hard to find, a gap in the conventions, or a gap in the policy. |
