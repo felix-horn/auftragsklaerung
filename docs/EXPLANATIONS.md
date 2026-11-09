@@ -27,6 +27,8 @@ Numbers and decisions have their home in `CLAUDE.md`. This file repeats some of 
   1. What is promptfoo, and why do we use it?
   2. Why not just vitest?
   3. Why is `evals/` so big, and why does it need to be that complex?
+- Golden set
+  4. What is the difference between `POLICY.md` and `LABELLING.md`?
 - How entries get here
 
 ---
@@ -39,6 +41,9 @@ Some words mean two things in this project. This file always says which one.
 |---|---|
 | golden set | The 22 German emails in `evals/golden/cases.ts`, each with its correct labels. |
 | label | The correct value of one field for one golden email, decided from `POLICY.md` alone. |
+| rule | One numbered business rule in `POLICY.md`, such as R-12 (Fristen). Its ID is never renumbered or reused. |
+| convention | One instruction in `LABELLING.md` on how to write a label down. It never decides what the label is. |
+| annotator | Whoever labels the golden set: Felix, and in Module 3.3 a second annotator, Gemini, in a fresh session with only `POLICY.md`, `LABELLING.md` and the emails. |
 | field | One part of the extraction. Seven are checked: `intents`, `requestedAction`, `orderNumbers`, `customerNumbers`, `escalationSignals`, `deadlineStated`, `urgency`. |
 | eval run | One pass of all 22 golden emails through the pipeline: 22 API calls, about 12.5 US cents. |
 | CI run | One run of the GitHub Actions workflow: type check, unit tests, one eval run, then the gate. |
@@ -356,6 +361,146 @@ So the gate gets stricter as fixes land: a check that is right in every run of a
 **Recap in technical terms.** The golden dataset is schema-validated on load. The equivalence rules are an order-insensitive multiset comparison for lists, presence-then-containment for quoted spans, presence only for free text, and a derived field recomputed from the model's output. Harness errors are kept apart from model failures, so failures never leave the denominator. Repeated trials classify every check as stable, consistently failing or flaky, and experiments are judged per check with Fisher's exact test. The CI gate is a regression gate against a stored baseline that guards only checks with a perfect baseline record: a ratchet that tightens as fixes are adopted, with flaky checks quarantined from the verdict.
 
 **As of** 04.11.2026, Module 4. Line counts: `wc -l` in `evals/` on that date. Baseline numbers: `CLAUDE.md` (Observed numbers; Noise and comparing runs). Gate behaviour: `CLAUDE.md` (CI) and `evals/gate.ts`. The E-10 demonstration: the roadmap, Module 3.
+
+---
+
+## Golden set
+
+### 4. What is the difference between `POLICY.md` and `LABELLING.md`?
+
+**In short.** `POLICY.md` says what the right answer is: the business rules, decided by the business owner. `LABELLING.md` says how to write that answer down in the golden set, so that two people who agree on the business still write the same thing. A change to `POLICY.md` can change a label; a change to `LABELLING.md` only changes how a label is written. The model sees neither file: the prompt and the schema are our implementation of the policy, and the eval measures how well they implement it.
+
+**In detail**
+
+**Why there is a policy at all.** Before Module 3.1, some business rules were written down in one place only: the system prompt. Email 19, a supplier offering us their services, was classified as advertising because a sentence in the prompt said so. If that sentence is the only place the rule exists, the prompt decides the correct answer, and rewording the prompt moves it. An eval built that way can't fail. So the project keeps three things apart:
+
+| Artifact | What it is | Changed by |
+|---|---|---|
+| `POLICY.md` | What the business wants, in business terms. No prompts, schemas or models. | the business owner (Felix, playing the operations manager) |
+| the golden labels | The correct answer for each golden email, derived from the policy. | labelling, following `LABELLING.md` |
+| the prompt and the schema | An implementation of the policy. The thing under test. | engineering |
+
+Rewording the third must never be able to move the second.
+
+**The separating question.** When you are unsure about a label, ask: could two annotators who agree on everything the business wants still write different things?
+
+- **Yes** → it's about how to write the value. The answer belongs in `LABELLING.md`.
+- **No, they could disagree about the value itself** → it's about what the business wants. The answer belongs in `POLICY.md`.
+
+Worked cases, all about deadlines:
+
+| Email text (invented unless named) | `POLICY.md` decides | `LABELLING.md` decides |
+|---|---|---|
+| „Bitte bestätigen Sie die Stornierung bis Freitag." (like E-08) | It is a Frist: the customer wants an answer by a point in time (R-12). | Write `"bis Freitag"`: the time expression and the word that introduces it, without the full stop at the end of the sentence. |
+| „Wir erwarten Ihre Rückmeldung innerhalb von drei Werktagen." | A Frist (R-12). | Write `"innerhalb von drei Werktagen"`. |
+| „Sollte die Gutschrift nicht bis zum 30.04. vorliegen, …" (like E-12) | A Frist, and it stays one even after the date has passed (R-12). | Write `"bis zum 30.04."`: a date's dot is kept. |
+| „Lieferung bis zum 15.04." (like E-10) | **Not** a Frist: it is a requested delivery date, even though it starts with „bis" (R-12). | Nothing to write: the label is `null`. A convention never turns something into a Frist. |
+| „Wir überlegen, den Auftrag zu stornieren." | **Nothing yet.** Not a declared cancellation, and not a threat under R-11, because there is no condition („falls …"). A gap in the policy. | Can't help: no way of writing it down answers whether it is a cancellation. |
+| „bis spätestens Freitag, 12 Uhr" | Clearly a Frist (R-12). | **Nothing yet**, if the convention doesn't say whether „12 Uhr" belongs in the label. Two annotators who agree it is a Frist could still write it differently. A gap in the conventions. |
+
+The last two rows are the two kinds of gap, and they are fixed in different places:
+
+| Gap | Where the fix goes | What else happens |
+|---|---|---|
+| in the policy (second-to-last row) | `POLICY.md`, decided by the business owner, with a new version | Stop labelling; recheck the cases the rule touches, then continue. |
+| in the conventions (last row) | `LABELLING.md` | Recheck the cases already labelled, because one of them may have been written the other way. |
+| neither: the answer was in `POLICY.md`, just hard to find | nowhere new | Write the label; optionally note in `notes` where the answer was. Example: „Bitte grüßen Sie Herrn Schmidt." is not an Anliegen, because `POLICY.md`'s Begriffe section says greetings aren't. |
+
+**What a policy rule looks like.** Shortened and reworded from R-12; the real wording is in `docs/POLICY.md`:
+
+```markdown
+### R-12 — Fristen
+
+Eine Frist ist ein Zeitpunkt, bis zu dem der Kunde von
+uns eine Antwort oder eine Klärung verlangt. Sie wird im
+Wortlaut der Nachricht festgehalten.
+
+„Bitte bestätigen Sie uns die Stornierung bis Freitag"
+enthält eine Frist.
+
+Keine Frist ist ein Datum, das etwas anderes beschreibt,
+auch wenn es mit „bis" eingeleitet wird:
+- ein gewünschter Liefertermin („Lieferung bis zum 15.04."),
+- ein von uns zugesagter Termin,
+- ein Ereignis, das bereits stattgefunden hat.
+
+Eine inzwischen abgelaufene Frist bleibt eine Frist.
+
+**Begründung:** Eine Frist sagt, wann der Kunde eine
+Reaktion erwartet, und bestimmt die Reihenfolge der
+Bearbeitung. Liefertermine werden im Auftragsbestand
+geprüft, nicht aus der Nachricht übernommen.
+
+**Seit:** v1.0
+```
+
+In English: a Frist is a point in time by which the customer wants an answer or a clarification from us. A date that describes something else is not a Frist, even if it starts with „bis" ("by"): a requested delivery date, a date we promised, or something that already happened. A Frist that has since passed is still a Frist. The reason: it decides which email is worked on first. Delivery dates are checked in the order system, not taken from the email.
+
+Every rule has the same parts:
+
+- **an ID and a title** (R-12, Fristen). Labels and notes cite rules by ID, so an ID is never renumbered or reused; a new rule takes the next free number.
+- **the rule**, with examples that match it and examples that don't. The examples come from the golden emails.
+- **Begründung**: why the business wants it. Without the reason, nobody can tell later whether a new case falls under the rule.
+- **Seit**: the version that introduced the rule.
+
+**What else is in `POLICY.md`.** German content, an English filename and a short English note at the top for readers who don't speak German. The sections:
+
+| Section | What it holds |
+|---|---|
+| version and date | The version that labels cite in `policyVersion`. |
+| Zweck, Kontext | What the inbox is for and who works it: a Sachbearbeiter (a clerk) at a German mid-sized manufacturer. |
+| Begriffe | Defined words, each with one meaning. In the first draft, *Anliegen* did three jobs; it became two terms: *Anliegen*, something the reply must address (the schema field `intents`), and *Gewünschte Maßnahme*, what the customer explicitly asks us to do (`requestedAction`). |
+| Kategorien | The eight intent categories, each with its code value, such as Kaufanfrage → `purchase_inquiry`. |
+| Regeln | R-01 to R-13, in five groups, in the order a clerk reads an email: Grundsätze, Einordnung, Gewünschte Maßnahme, Auftrags- und Kundenbezug, Dringlichkeit. |
+| Bekannte Lücken | Questions left open on purpose, each with its reason, and none with a test case. Examples: mail from our own suppliers has no category; an overdue delivery promise should raise urgency, but whether it is overdue is order-system data (Module 4); a message that only says thank you contains no Anliegen. |
+| Änderungshistorie | Every change, with its date and whether it moved a label. Examples: v1.2 renamed Neuanfrage to Kaufanfrage (`new_inquiry` to `purchase_inquiry`), because "Neuanfrage" suggested a new customer; v1.3 made clear that a Rücksendeetikett (return label) is not a Dokumentenanforderung. |
+
+The version rule: a clarification that moves no label is a minor version (v1.1); a change that moves a label is a major version (v2.0).
+
+**What a labelling convention looks like.** Shortened and reworded from the `deadlineStated` convention; the real wording is in `docs/LABELLING.md`:
+
+```markdown
+### deadlineStated
+
+Festgehalten wird nur die Zeitangabe mit dem Wort, das
+sie einleitet („spätestens am 12.06.", „innerhalb von
+drei Werktagen"), wörtlich und unübersetzt. Ein
+Satzzeichen am Satzende gehört nicht dazu, der Punkt
+eines Datums schon.
+
+Ob etwas eine Frist ist, entscheidet R-12, nicht diese
+Konvention.
+```
+
+In English: write only the time expression with the word that introduces it, word for word and untranslated. Punctuation at the end of the sentence is left out; a date's dot is kept. Whether something is a Frist is decided by R-12, not by this convention.
+
+**What else is in `LABELLING.md`.** Also German, with an English note at the top:
+
+| Part | What it holds |
+|---|---|
+| one convention per field | `intents`: a set of code values, at least one, no duplicates, no confidence. `requestedAction`: a short German summary with the verb at the end, such as „Liefertermin mitteilen", or `null` as R-06 and R-07 say. `orderNumbers`, `customerNumbers`: the number exactly as written, without the words around it, and no missing prefix added. `escalationSignals`: a set of code values. `deadlineStated`: as above. `urgency`: by hand, following R-13, never computed with `deriveUrgency`. |
+| code values are names, not definitions | `purchase_inquiry` is a label for the category Kaufanfrage; what belongs in it is decided by `POLICY.md`. For example, an inquiry from an existing customer is a Kaufanfrage too. |
+| `policyVersion` and `notes` | `policyVersion` is the `POLICY.md` version a case was last checked against, raised on a recheck even if no label moves. `notes` are optional: a rule ID and a short German reason, only where the annotator hesitated. |
+| Zweifelsfälle | The three-way decision above: in the policy but hard to find, a gap in the conventions, or a gap in the policy. |
+| examples | Invented or altered, never the golden emails, so that a convention never quietly answers a golden case. |
+
+**Who reads which file.**
+
+| Reader | `POLICY.md` | `LABELLING.md` |
+|---|---|---|
+| Felix, labelling | yes | yes |
+| the second annotator (Gemini, Module 3.3) | yes | yes |
+| the model inside `extractEmail` | never | never |
+
+The model sees neither on purpose. `POLICY.md`'s examples come from the golden emails, so putting it in the prompt would hand the model the answers, and the eval would measure whether it can copy, not whether the prompt and schema capture the rules.
+
+**How the split showed up in the numbers.** In Module 3.3, Felix and the second annotator agreed on 148 of 154 field labels (96.1 %). Each of the six differences was resolved against `POLICY.md`. Two of them were policy gaps and became new versions, v1.2 and v1.3. That is what the second annotator is for: a disagreement between two careful readers shows a rule that is unclear, before the model is ever measured against it.
+
+**How the split shows up in the code.** The model is told to quote a deadline word for word, but it never sees the `LABELLING.md` convention on how much to quote. So the eval compares deadlines by containment rather than equality: equality would measure whether the model guessed a convention it was never given (entry 3, part 1). The same goes for `requestedAction`: the label's wording follows a convention the model doesn't know, so only presence is compared.
+
+**Recap in technical terms.** `POLICY.md` is the business specification: versioned, with stable rule IDs, rationale, known gaps and a change log. It is the ground truth the labels are derived from. `LABELLING.md` is the annotation guidelines: recording conventions that make labels from different annotators comparable, plus the procedure for ambiguous cases. Keeping both out of the prompt separates the specification from the implementation under test and prevents label leakage. Inter-annotator agreement measured the specification's clarity before any model was measured against it.
+
+**As of** 08.11.2026, Module 4. `POLICY.md` v1.3 with R-01 to R-13, as recorded at the end of Module 3. The structure, R-12 and the conventions come from the Module 3.1 and 3.3 chats in which both files were written; the two excerpts are shortened and reworded, not checked against the current files. If a later module added rules, the header of `docs/POLICY.md` has the current version.
 
 ---
 
