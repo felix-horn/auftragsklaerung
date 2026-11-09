@@ -29,6 +29,8 @@ Numbers and decisions have their home in `CLAUDE.md`. This file repeats some of 
   3. Why is `evals/` so big, and why does it need to be that complex?
 - Golden set
   4. What is the difference between `POLICY.md` and `LABELLING.md`?
+- Extraction
+  5. How do we make sure the model's answer fits the schema?
 - How entries get here
 
 ---
@@ -45,6 +47,9 @@ Some words mean two things in this project. This file always says which one.
 | convention | One instruction in `LABELLING.md` on how to write a label down. It never decides what the label is. |
 | annotator | Whoever labels the golden set: Felix, and in Module 3.3 a second annotator, Gemini, in a fresh session with only `POLICY.md`, `LABELLING.md` and the emails. |
 | field | One part of the extraction. Seven are checked: `intents`, `requestedAction`, `orderNumbers`, `customerNumbers`, `escalationSignals`, `deadlineStated`, `urgency`. |
+| Zod schema | `emailExtractionSchema` in `src/schema.ts`: the full definition of an extraction, including rules that JSON Schema can't express. |
+| JSON Schema | A standard format for describing JSON. The AI SDK converts the Zod schema into it, and that copy is what Anthropic receives. |
+| token | The unit a model writes in: a word or a piece of one. |
 | eval run | One pass of all 22 golden emails through the pipeline: 22 API calls, about 12.5 US cents. |
 | CI run | One run of the GitHub Actions workflow: type check, unit tests, one eval run, then the gate. |
 | check | One assertion on one email. 22 emails × 8 assertions = 176 checks per eval run. |
@@ -277,7 +282,7 @@ Two rules follow, recorded in `CLAUDE.md`:
 - Per-field numbers count only from an eval with 0 ERRORs.
 - After an ERROR, run the whole eval again (about 12.5 US cents) instead of re-running the one test case. Re-running one case creates a second eval, and the two would have to be added up by hand.
 
-**Why keep `schemaValid` when the field checks already fail on a broken answer?** It is the only check that says *why* the answer was broken, and its own number separates "the answer was broken" (all seven fields wrong at once) from "one field was wrong". It is left out of the 154 field comparisons because it has no label, and a broken answer already shows up as seven failed field checks. In the ten baseline runs it was right 220 of 220 times.
+**Why keep `schemaValid` when the field checks already fail on a broken answer?** Its own number separates "the answer was broken" (all seven fields wrong at once) from "one field was wrong". It was also meant to say *why* an answer was broken, but it can't: after a schema failure the adapter passes the model's raw text on as a string, so its reason is always `Invalid input: expected object, received string`. That is a known limit, noted at the end of Module 3.8 but not in `CLAUDE.md`. The real reason is in the AI SDK's error (entry 5). `schemaValid` is left out of the 154 field comparisons because it has no label, and a broken answer already shows up as seven failed field checks. In the ten baseline runs it was right 220 of 220 times.
 
 #### Part 3: What changed across ten runs?
 
@@ -451,7 +456,7 @@ Every rule has the same parts:
 | Zweck, Kontext | What the inbox is for and who works it: a Sachbearbeiter (a clerk) at a German mid-sized manufacturer. |
 | Begriffe | Defined words, each with one meaning. In the first draft, *Anliegen* did three jobs; it became two terms: *Anliegen*, something the reply must address (the schema field `intents`), and *Gewünschte Maßnahme*, what the customer explicitly asks us to do (`requestedAction`). |
 | Kategorien | The eight intent categories, each with its code value, such as Kaufanfrage → `purchase_inquiry`. |
-| Regeln | R-01 to R-13, in five groups, in the order a clerk reads an email: Grundsätze, Einordnung, Gewünschte Maßnahme, Auftrags- und Kundenbezug, Dringlichkeit. |
+| Regeln | R-01 to R-13 from Module 3, in five groups, in the order a clerk reads an email: Grundsätze, Einordnung, Gewünschte Maßnahme, Auftrags- und Kundenbezug, Dringlichkeit. Module 4 added R-14 to R-17, the rules for the order-system lookup, such as who may see which order. |
 | Bekannte Lücken | Questions left open on purpose, each with its reason, and none with a test case. Examples: mail from our own suppliers has no category; an overdue delivery promise should raise urgency, but whether it is overdue is order-system data (Module 4); a message that only says thank you contains no Anliegen. |
 | Änderungshistorie | Every change, with its date and whether it moved a label. Examples: v1.2 renamed Neuanfrage to Kaufanfrage (`new_inquiry` to `purchase_inquiry`), because "Neuanfrage" suggested a new customer; v1.3 made clear that a Rücksendeetikett (return label) is not a Dokumentenanforderung. |
 
@@ -500,7 +505,119 @@ The model sees neither on purpose. `POLICY.md`'s examples come from the golden e
 
 **Recap in technical terms.** `POLICY.md` is the business specification: versioned, with stable rule IDs, rationale, known gaps and a change log. It is the ground truth the labels are derived from. `LABELLING.md` is the annotation guidelines: recording conventions that make labels from different annotators comparable, plus the procedure for ambiguous cases. Keeping both out of the prompt separates the specification from the implementation under test and prevents label leakage. Inter-annotator agreement measured the specification's clarity before any model was measured against it.
 
-**As of** 08.11.2026, Module 4. `POLICY.md` v1.3 with R-01 to R-13, as recorded at the end of Module 3. The structure, R-12 and the conventions come from the Module 3.1 and 3.3 chats in which both files were written; the two excerpts are shortened and reworded, not checked against the current files. If a later module added rules, the header of `docs/POLICY.md` has the current version.
+**As of** 08.11.2026, Module 4. `POLICY.md` was v1.3 with R-01 to R-13 at the end of Module 3; by Module 4.5 it is v1.8 with R-14 to R-17 added (roadmap, 05.11.2026). The structure, R-12 and the conventions come from the Module 3.1 and 3.3 chats in which both files were written; the two excerpts are shortened and reworded, not checked against the current files.
+
+---
+
+## Extraction
+
+### 5. How do we make sure the model's answer fits the schema?
+
+**In short.** Twice, in two different places. First, on Anthropic's servers, while the model writes: at every step, Anthropic only lets it choose a next token that keeps the answer valid. That covers the parts of the schema that reach Anthropic: types, enum values, required fields and no extra fields. Second, on our machine, after the answer arrives: the AI SDK checks it against the full Zod schema, including the rules that never reach Anthropic, such as "at least one intent". If that check fails, the call throws an error. Nothing retries, and the model never sees the error. Neither check says whether the content is right; that is what the eval is for.
+
+**In detail**
+
+**From our code to Anthropic and back.** `extractEmail` calls `generateText` with `Output.object({ schema: emailExtractionSchema })`. One call goes through these stages:
+
+| Stage | Where | Who | What happens |
+|---|---|---|---|
+| 1 | our machine, before the call | the AI SDK | Converts the Zod schema to JSON Schema and puts it in the request body under `output_config.format.schema`. |
+| 2 | Anthropic's servers, while the model writes | Anthropic | Uses that JSON Schema to restrict which tokens the model may choose next. |
+| 3 | Anthropic's servers, at the end | Anthropic | Sends the answer back with HTTP 200. No second check, no error for a bad answer. |
+| 4 | our machine, after the reply | the AI SDK | Reads the text as JSON and checks it against the full Zod schema. Passes: `output` is typed data. Fails: the call throws. |
+| 5 | the eval only | our assertions | Check the shape once more, then compare each field with its label (entries 1 and 3). |
+
+**Stage 1: what survives the conversion.** JSON Schema can't express everything a Zod schema says, so part of the schema never reaches Anthropic as a rule. We checked this by dumping the request body (`docs/request-body-reference.json`), twice:
+
+| In `src/schema.ts` | What Anthropic receives | Enforced by Anthropic? |
+|---|---|---|
+| a type: string, number, array, object | the type | yes |
+| an enum, such as the eight intent codes | the list of allowed values | yes |
+| every field required | `required` | yes |
+| no fields beyond the schema's | `additionalProperties: false` | yes |
+| `.nullable()` | "string or null" | yes |
+| `.min(1)` on `intents` | only the text "min items: 1." added to the field's description | no: it becomes a request |
+| the 0–1 range of `confidence` | only text in the description | no: a request |
+| a `.refine()` rule | nothing | no |
+| a `.describe()` sentence | the field's description | no: it is prompt text, not a rule |
+
+The last row matters on its own: every `.describe()` sentence is prompt text that happens to be stored in the schema file. Changing one changes what the model is told.
+
+**Stage 2: what "only what the schema allows" means.** A model writes one token at a time. At each step it computes a probability for every token it could write next and picks one. With a schema, Anthropic first removes every token that would make the answer break the schema, and the model picks among the rest. This is called constrained decoding. It isn't the model obeying a rule; the model simply can't choose a token that was removed. Examples:
+
+| The answer so far | What the model may write next |
+|---|---|
+| `{"intents": [{"type": "` | only the start of one of the eight intent codes. `"reklamation"` is impossible. |
+| a closing `}` before `deadlineStated` was written | impossible: the field is required |
+| `"urgency":` as a new field | impossible: no extra fields |
+| `"deadlineStated": ` | a string or `null` |
+| `"requestedAction": "` | any text at all: the schema only says "string" |
+| `"intents": [` followed by `]` | possible: "at least one" never reached Anthropic |
+| `"confidence": ` | any number, including 1.3 |
+
+So constrained decoding guarantees the shape, as far as the schema reached Anthropic, and says nothing about the content inside a string. `"orderNumbers": ["A-99999"]` has the perfect shape even when the email says A-61150.
+
+It also explains the sentence "the schema can say unknown, so the model isn't forced to guess". Because of constrained decoding, the model has to write something into every required field. If `deadlineStated` could only be a string, an email without a deadline would still get one: the model would have to invent it. `.nullable()` gives it an allowed way to say "not in the email" (`null`, as `POLICY.md` R-01 asks), and the same goes for an empty list `[]` and the intent `other`.
+
+Three ways an answer can still break the shape, even with constrained decoding:
+
+- **A rule that never reached Anthropic:** `"intents": []` or `"confidence": 1.3`.
+- **The answer is cut off** at `maxOutputTokens` (2,000 in our code). The JSON stops in the middle. The highest output we have measured was 484 tokens, so this is unlikely but possible.
+- **The model refuses** instead of answering.
+
+**Stage 4: the check on our side.** The AI SDK always does this check; we don't write it. It uses the full Zod schema, so it catches what Anthropic didn't enforce. Two errors are possible, and both are created by the AI SDK on our machine, not sent by Anthropic:
+
+| What came back | Result |
+|---|---|
+| valid JSON that matches the Zod schema | `output` is the typed extraction |
+| text that isn't valid JSON, or breaks the Zod schema | `NoObjectGeneratedError`. It carries the raw text (`.text`) and the reason (`.cause`), such as the Zod error naming the field. |
+| no text at all, for example cut off before any was written | `NoOutputGeneratedError` |
+| an HTTP error from Anthropic: 401 (bad key), 429 (too many requests), 529 (overloaded) | No answer to check. For errors that may pass, such as 429 or 529, the AI SDK first sends the same request again a few times; then it throws `APICallError` or `RetryError`. |
+
+**Nothing retries a failed check.** The automatic retry in the last row only resends the same request after an HTTP error. It knows nothing about the schema. When the check in stage 4 fails, the call throws once and the error goes to whoever called `extractEmail`. The model is not called again and never sees the Zod error. A retry that shows the model its error would be a loop we write ourselves: catch the error, add its message to the conversation, call again. As far as the chats record, `extractEmail` has never had such a loop.
+
+**Where the error ends up today:**
+
+- **in the eval:** the adapter `providers/extract-email.ts` catches `NoObjectGeneratedError` and passes the raw text on, so every field check fails with `no valid extraction` (entry 3, part 2). An HTTP error becomes an ERROR, which isn't measured.
+- **in the pipeline:** handling failures, with retries and a dead-letter queue, is Module 7 on the roadmap.
+
+**How often it has happened.** In Module 3.5, a stand-in API (not the real model) returned HTTP 200 with `"intents": []`, and the AI SDK threw `NoObjectGeneratedError` as expected. The real model has produced no answer with the wrong shape in our runs: 20 of 20 at the end of Module 2, and 220 of 220 in the ten baseline runs.
+
+**Stage 5: shape is not content.** All four stages check the shape. The eval checks the content, with three invented answers to an email about order A-61150:
+
+| The model's answer | Shape | Content | Caught by |
+|---|---|---|---|
+| `orderNumbers: ["A-61150"]` | right | right | nothing to catch |
+| `orderNumbers: ["A-99999"]` | right | wrong | only the eval's comparison with the label |
+| `intents: []` | wrong | — | the AI SDK's check; in the eval, every field then counts as wrong |
+
+**Keeping the sent schema the one we mean.** Two habits from Module 3, both recorded in `CLAUDE.md`:
+
+- **`ai`, `@ai-sdk/anthropic` and `zod` are pinned to exact versions.** Together they produce the JSON Schema that is sent. A version bump could change it under an unchanged `schema.ts`.
+- **After any change to the system prompt, `schema.ts` or a generation parameter, the request body is dumped again and diffed:**
+
+```bash
+DUMP_REQUEST_BODY=docs/request-body-reference.json npm run dump
+git diff docs/request-body-reference.json
+```
+
+  The new reference is committed with the change that moved it. An unexpected diff means stop.
+
+**What was corrected along the way.** Several explanations of this were wrong at first, mine and yours. All were settled the same way: by looking at what was actually sent, or at the current docs.
+
+| Claim | What is true | How it was found |
+|---|---|---|
+| The AI SDK wraps the schema in a hidden tool and forces the model to call it. (Claude, Module 2) | The schema goes in `output_config.format.schema`. No tool, no forced tool call. | The response had no tool call; the dumped request body showed `output_config`. |
+| When validation fails, the SDK retries and shows the model the error. (Claude, first `extract.ts`, Module 2) | No retry; the call throws once. | The AI SDK docs, checked again for AI SDK 7. |
+| Anthropic checks the answer and sends an error back. (Felix's question, Module 3.6) | Anthropic sends HTTP 200 for every answer it writes. Both errors come from the AI SDK. | Module 3.5: the stand-in API returned 200 with `"intents": []`, and the AI SDK threw. |
+| `.min(1)` and the 0–1 range reach Anthropic. (an early assumption) | They become text in the description. | The dumped request body, checked for both. |
+| The project uses AI SDK 6. (`CLAUDE.md`, Module 2) | AI SDK 7. | Corrected in `CLAUDE.md` at the start of Module 3. |
+
+The lesson recorded in the course outline: claims about what a library sends get checked on the wire, whoever makes them.
+
+**Recap in technical terms.** Structured outputs on Anthropic use constrained decoding: the Zod schema is converted to JSON Schema and sent as `output_config.format.schema`, and sampling is restricted to tokens that keep the output valid. Only type, enum, required and `additionalProperties` are enforced server-side; length and range constraints are demoted to description text, and refinements are dropped. The AI SDK then validates the response client-side against the full Zod schema and throws `NoObjectGeneratedError` or `NoOutputGeneratedError`. There is no repair or retry on validation failure; `maxRetries` covers transport errors only. Representable absence (nullable fields, empty arrays, a residual category) keeps constrained decoding from forcing fabricated values. Validation checks structure; semantic correctness is measured by the eval against golden labels.
+
+**As of** 08.11.2026, Module 4. Model `claude-sonnet-5`, AI SDK 7. What is enforced: `CLAUDE.md` (Stack facts), from the dumped request body. Errors and retry: the AI SDK docs, checked on 29.09.2026. The corrections: the Module 2, 3.5 and 3.6 chats. Not checked against the current code: whether `extractEmail` still has no retry loop.
 
 ---
 
