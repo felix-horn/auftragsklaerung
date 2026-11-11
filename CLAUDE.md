@@ -53,8 +53,11 @@ Since Module 4.7 one pipeline function joins the two halves:
   repo, test files included.
 - vitest 5.0.1 needs vite as a required peer; npm installs it automatically. A fresh
   `npm install` of vitest 5.0.1 crashes npm 10.9 ("Cannot read properties of null
-  (reading 'edgesOut')"); npm 11 installs it, and `npm ci` from the lockfile works
-  under npm 10 as well. In CI, install with `npm ci`.
+  (reading 'edgesOut')"); npm 11 installs it. `npm ci` from today's lockfile needs
+  npm 11 too: npm 10.9.9 refuses it as out of sync ("Missing:
+  @modelcontextprotocol/server@2.4.0 from lock file"), npm 11.21.2 installs it
+  (both checked 11.11.2026 in a scratch copy, Node 22.23.4). In CI, install with
+  `npm ci`.
 - promptfoo 0.123.0 loads .ts files (provider, test generator, assertion) by
   registering tsx itself; imports with `.js` names resolve to the `.ts` files, as
   under tsx and vitest. No withheld install script is needed for this.
@@ -218,7 +221,7 @@ fake fetch (no API), or in a real run of a 04_module/ script.
 - mock-erp/ stands in for an outside system (Module 4.3): neither pipeline nor
   eval code. It imports nothing from src/: its contract is its own
   generated copy (mock-erp/generated/), so the document is the only link
-  between the two sides (taken from Felix's DKLB monorepo, 4.5). Pipeline
+  between the two sides (taken from Felix's earlier work project, 4.5). Pipeline
   code in src/ never imports mock-erp/; tests may start it as the stand-in
   ERP (src/erp-client.test.ts, 4.5).
 - Everything promptfoo loads lives in evals/ (config, providers/, assertions/,
@@ -261,6 +264,10 @@ fake fetch (no API), or in a real run of a 04_module/ script.
   linter checks it.
 - Pipeline functions return data and print nothing. Entry points decide what to
   show: extract-golden-set.ts prints, the promptfoo provider reports to promptfoo.
+- README.md is the repository's public front page (since 4.7). Its numbers come
+  from this file and its Status table follows the roadmap. When a commit changes
+  a number README.md quotes, a module's status or a command it lists, update
+  README.md in the same commit.
 - 04_module/ holds Module 4's teaching scripts and experiments. The 4.1 scripts
   call the API directly, with no fake switch (Felix's decision, 4.1: easier to
   read is worth the occasional cent), and print every request and response body
@@ -607,9 +614,12 @@ eval-result.json`, 22 API calls, about 12.5 US cents), upload of
 - Nothing is blocked: commits go straight to main, a red run marks the commit and
   emails. Required status checks on pull requests would block, but add a branch
   and a pull request per step for one person; not set up.
-- Repository is private: 2,000 free GitHub minutes a month, a run takes about 1–2.
-  If it is ever made public, GitHub disables scheduled runs after 60 days without
-  repository activity.
+- Repository is public (since November 2026, Module 4.7): GitHub's standard
+  runners cost nothing in public repositories; a run takes about 1–2 minutes.
+  GitHub disables scheduled runs after 60 days without repository activity;
+  re-enable the workflow in the Actions tab. Run logs and the eval-result.json
+  artifacts are public; neither holds the key (GitHub masks it as `***`, and
+  promptfoo writes it into no results file, see Stack facts).
 - Changing a prompt on a branch shows the gate at work without touching main
   (step 5 demo, see Observed numbers (CI)). A schema change on such a throwaway
   branch skips the request-body dump; changes that stay never do.
@@ -692,7 +702,7 @@ built from 4.3 on.
   "not reachable"; both map to R-16 outcomes. "Today" for R-17 is passed in,
   never read inside the stage. Not Next.js: Next.js practice comes in Module
   8, where it is the app.
-- Taken from Felix's mock backend of an earlier work project (DKLB), scaled
+- Taken from Felix's mock backend of an earlier work project, scaled
   down: base URL from env, a seed with problem cases, one contract for mock
   and client (since 4.5 one OpenAPI document, from which each side
   generates its own Zod schemas), deterministic time. Not taken, because nothing in Module 4
@@ -849,8 +859,9 @@ A-10001 to A-10003). No API call, no server.
 - The ERP is passed in (`Erp` interface, two functions). `ERP_BASE_URL`
   (4.5) picks which server the HTTP client talks to; the parameter picks
   HTTP client or in-memory fake. Rejected: a module-level client imported
-  by the stage (DKLB style), because unit tests would then need `vi.mock`
-  or the mock server, and test-only behaviour lands in the mock or in
+  by the stage (the earlier work project's style), because unit tests
+  would then need `vi.mock` or the mock server, and test-only behaviour
+  lands in the mock or in
   production code (an "is this the mock?" check on the URL, which drifts
   when deployments change). The AI SDK works the same way:
   `generateText({ model })`, with test doubles in `ai/test`.
@@ -1149,15 +1160,16 @@ The others wait for the larger golden set (Module 6 onward).
   Rejected in 4.5: a top-level erp/ with the mock nested inside (Felix's
   proposal), because it splits our application over two folders and mixes
   it with the stand-in.
-- apps/ and packages/ at the top, as in Felix's DKLB monorepo (Felix's
-  proposal in 4.5; deferred to Module 8 on Claude's recommendation). Target
+- apps/ and packages/ at the top, as in the monorepo of Felix's earlier
+  work project (Felix's proposal in 4.5; deferred to Module 8 on Claude's
+  recommendation). Target
   layout once the Next.js approval queue exists: apps/web/ (Module 8),
   apps/erp-mock/ (today's mock-erp/), packages/pipeline/ (today's src/),
   contracts/ and evals/ stay at the top. Why not now: src/ is imported by
   evals/, 04_module/ and later the web app, so in that layout it is a
   package, not an app (moving it to apps/ now means moving it again in
   Module 8); with one package.json and one tsconfig, apps/ would only name
-  folders, not keep them apart as DKLB's workspaces do; and today there
+  folders, not keep them apart as that project's workspaces do; and today there
   is one app of ours. Taken already in 4.5: each side generates its own
   code from contracts/ (mock-erp/generated/). Whether to add workspaces is
   decided with the move. About 20 files reference src/ (imports, scripts,
