@@ -868,9 +868,19 @@ A-10001 to A-10003). No API call, no server.
 - The fake ERP lives in src/erp-stage.test.ts: exact matching like the mock,
   no business rule, records every lookup in `calls`, and fails for every
   address or order number in its `unreachable` list.
-- Outcome texts: the code holds kinds (`refused`, …); the comments name the
-  POLICY.md text for each. The German texts get one table in 4.7, where
-  the entry point first prints them.
+- Outcome texts: the code holds kinds (`refused`, …); the German texts
+  are one table, `outcomeTexts` in src/outcome-texts.ts (4.7), for entry
+  points and later the approval queue. Its keys (`OutcomeWithText`) are
+  every kind except `assigned` and `order`; `unreachable` is one key for
+  the sender lookup (R-14) and an order lookup (R-16), which share the
+  text. tsc refuses the table when a kind has no text.
+  src/outcome-texts.test.ts (4 tests) checks that each text occurs in
+  docs/POLICY.md inside „…“, every run of spaces and line breaks read as
+  one space (the unknown-sender text is wrapped across two lines). A
+  boolean with a message, not `toContain`, which prints all of POLICY.md
+  (about 40 KB) on failure. Mutations, once in a scratch copy: a full stop
+  removed failed 1 test; without the whitespace rule the unknown-sender
+  text failed; a deleted entry failed tsc (TS2741).
 - Felix's decisions (POLICY.md, by committing the recommendation): v1.6
   R-15, lower-case prefix or missing hyphen is looked up, a space stays
   invalid; v1.7 R-14, ERP unreachable at the sender lookup records
