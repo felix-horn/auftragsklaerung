@@ -13,6 +13,7 @@
     "eval:report": "tsx evals/report.ts",
     "extract:golden-set": "tsx src/extract-golden-set.ts",
     "golden:check": "tsx evals/golden/check.ts",
+    "process:golden-email": "tsx src/process-golden-email.ts",
     "test": "vitest run"
   },
   "keywords": [],

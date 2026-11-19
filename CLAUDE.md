@@ -10,8 +10,9 @@ Since Module 4.7 one pipeline function joins the two halves:
 
 - Pipeline: src/process-email.ts (`processEmail`): email text, sender
   address and lookup day in; the extraction, both urgencies and the ERP
-  stage result out. See Pipeline (Module 4.7). No entry point calls it
-  yet (4.7 part 3 adds one).
+  stage result out. See Pipeline (Module 4.7). Entry point:
+  src/process-golden-email.ts (`npm run process:golden-email`), one
+  golden email from a sender address typed in.
 - Extraction: src/extract.ts (`extractEmail`, one model request) →
   src/urgency.ts (`deriveMessageUrgency`, R-13). Entry points: src/extract-golden-set.ts
   (`npm run extract:golden-set`) and the promptfoo provider.
@@ -389,6 +390,11 @@ fake fetch (no API), or in a real run of a 04_module/ script.
   seed's addresses, problems for developers on stderr; no API call. With
   `ERP_BASE_URL=http://127.0.0.1:4100/api` in front: a wrong base URL; with
   the mock stopped: no connection.
+- `npm run process:golden-email -- <golden case id> <sender address>`,
+  e.g. `-- E-06 einkauf@kessler-fluidtechnik.example`: one golden email
+  through processEmail (see Pipeline (Module 4.7)) against ERP_BASE_URL
+  (start `npm run erp` first), lookup day today in Germany. One API call,
+  about half a US cent.
 - `npx orval --config 04_module/minimal-http-server.orval.config.ts`, then
   `npx tsx 04_module/check-greetings.ts` — the 4.5 orval practice: Zod from
   the minimal server's OpenAPI document, used on typed-in bodies; no API
@@ -1065,9 +1071,10 @@ call, no server.
 - The lookup day is the calendar day in Germany:
   `toCalendarDateInGermany(instant)` in src/calendar-date.ts, tested in
   src/calendar-date.test.ts (6 tests, fixed instants; they pass with the
-  machine's TZ set to Europe/Berlin, America/New_York or Asia/Tokyo). The
-  4.7 entry point passes `toCalendarDateInGermany(new Date())`; pipeline
-  code never reads the clock. Not `toISOString().slice(0, 10)`: that is
+  machine's TZ set to Europe/Berlin, America/New_York or Asia/Tokyo).
+  src/process-golden-email.ts (4.7) passes
+  `toCalendarDateInGermany(new Date())`; pipeline code never reads the
+  clock. Not `toISOString().slice(0, 10)`: that is
   the UTC day, which at 00:30 in Germany still names the day before (from
   00:00 to 00:59 in winter, to 01:59 in summer).
 - How: `Intl.DateTimeFormat` with `timeZone: "Europe/Berlin"` (Intl knows
@@ -1119,6 +1126,26 @@ where; the rules are tested next to their functions.
   test: customer numbers added to the order numbers; the urgency of the
   message returned as the urgency after the lookup; a fixed lookup day instead
   of the one passed in; a fallback extraction on failure.
+- Entry point src/process-golden-email.ts (4.7 part 3): a golden case ID
+  and a bare sender address as arguments (the golden set has no senders;
+  entry points may import evals/golden/). It builds the ERP client from
+  `loadConfig()`, takes today in Germany as the lookup day and passes
+  extractEmail and the client to processEmail. Output, numbered in the
+  order the pipeline runs: 1. the extraction with its tokens; 2. the
+  urgency of the message; 3. the ERP lookup (the customer number or its
+  text, then one line per extracted order number: the ERP's fields, or
+  the text from outcomeTexts); 4. the urgency after the lookup, with a
+  line saying whether the lookup left it unchanged or raised it (from …
+  to …). ERP problems go to stderr, before all of it.
+- Behaviour, checked in a scratch copy against the mock ERP with a
+  stand-in for Anthropic's API (ANTHROPIC_BASE_URL pointed at a local
+  server answering a fixed extraction; no model involved): missing or
+  extra arguments, or an unknown ID, print the usage or the known IDs and
+  exit 1. A schema-breaking answer is not caught: Node prints the
+  NoObjectGeneratedError (about 170 lines: Zod's issues, then `text`, the
+  raw answer) and exits 1. With the mock stopped the model request still
+  runs, then the sender lookup reports no_connection on stderr and the
+  ERP lookup shows „Auftragsbestand nicht erreichbar.“ (exit 0).
 
 ## Open experiments
 
