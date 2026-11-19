@@ -682,7 +682,7 @@ built from 4.3 on.
 - Two ERP functions in Module 4 (mock ERP, 4.3):
   - findCustomerByEmailAddress: every email (R-14). The match ignores case; a
     customer number in the text identifies nobody.
-  - getOrderStatus: every recorded order number when the sender is assigned
+  - findOrderByNumber: every recorded order number when the sender is assigned
     to a customer, whatever the intent (R-15). Five digits with "A-", "a-",
     "A" or "a" in front, or with nothing in front, are looked up as "A-" plus
     the five digits (POLICY.md v1.6); nothing else is looked up.
@@ -841,8 +841,8 @@ A-10001 to A-10003). No API call, no server.
     bare digits are looked up whether R-09 Stufe 2 or Stufe 3; E-07's
     "78432" (recorded in 10/10 baseline runs) becomes a lookup of A-78432,
     E-21's "K-62418" (10/10) is invalid.
-  - `revealOrderOnlyToOwner(askingCustomerNumber, answer)`: R-16. Another
-    customer's order and a missing one give the same `refused`.
+  - `revealOrderOnlyToOwner(senderCustomerNumber, orderSearchResult)`:
+    R-16. Another customer's order and a missing one give the same `refused`.
 - Types: `ErpAnswer<T>` = found (erpRecord) / not_found / unreachable, a value,
   not an exception. `OrderOutcome` = order / refused / invalid /
   unreachable; only `order` carries data, the whole contract `Order`.
@@ -889,7 +889,14 @@ A-10001 to A-10003). No API call, no server.
   → revealOrderOnlyToOwner, ErpAnswer's `record` → `erpRecord`,
   OrderLookup's `recorded` → `extractedOrderNumber`, erpDataSchema and
   ErpData → mockErpDataSchema and MockErpData. Commits and handovers
-  before that date use the old names.
+  before that date use the old names. Renamed on 17.11.2026: the Erp
+  interface's getOrderStatus → findOrderByNumber (it returns the whole
+  order, not only its status; the 4.1 tools in 04_module/ keep the old
+  name, since they return a status only), and in src/erp-stage.ts
+  `sender` → `senderSearchResult` and `answer` → `orderSearchResult`
+  (an ErpAnswer may hold no record), runErpStage's input `orderNumbers` →
+  `extractedOrderNumbers` (the email's form, before R-15 adds "A-"), and
+  revealOrderOnlyToOwner's `askingCustomerNumber` → `senderCustomerNumber`.
 
 ## ERP contract (Module 4.5)
 

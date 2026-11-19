@@ -103,8 +103,14 @@ export function createErpClient({
         customerNotFoundSchema,
       );
     },
-    getOrderStatus: (orderNumber) =>
+    findOrderByNumber: (orderNumber) =>
       lookUpWith<Order>(
+        // The order number becomes one path segment, whatever it holds.
+        // runErpStage only passes normalised numbers ("A-" plus five digits,
+        // nothing to encode), but the Erp interface takes any string: an
+        // unencoded "/", "?" or "#" would change the path or end it:
+        // "../customers" would reach another endpoint, and "A-10001?x" would
+        // return order A-10001 instead of the ERP's 404 for an unknown number.
         `${baseUrl}/orders/${encodeURIComponent(orderNumber)}`,
         orderSchema,
         orderNotFoundSchema,

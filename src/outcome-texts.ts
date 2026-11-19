@@ -11,7 +11,7 @@ export type OutcomeWithText =
 
 // POLICY.md's texts for these outcomes, word for word: an unknown or
 // unreachable sender from the rule on who is asking (R-14), a refused,
-// invalid or unreachable order from the rule on what the asking customer
+// invalid or unreachable order from the rule on what the sender's customer
 // may see (R-16). The code works with the kinds; entry points, and later
 // the approval queue, show these texts.
 //

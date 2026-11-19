@@ -75,7 +75,7 @@ test("limit: any five digits get A-, also a customer number extracted without it
   expect(normaliseOrderNumber("20001")).toBe("A-20001");
 });
 
-// R-16: the outcome per looked-up number. The asking customer is K-20001.
+// R-16: the outcome per looked-up number. The sender's customer is K-20001.
 // A-10001 and A-10002 are its orders, A-10003 belongs to K-20002.
 
 const ownOrderInProgress: Order = {
@@ -102,7 +102,7 @@ const otherCustomersOrder: Order = {
   shippedOn: "2026-10-01",
 };
 
-test("R-16: the asking customer's own order: status, promised date and shipping date", () => {
+test("R-16: an order of the sender's customer: status, promised date and shipping date", () => {
   expect(
     revealOrderOnlyToOwner("K-20001", {
       kind: "found",
@@ -124,9 +124,7 @@ test("R-16: another customer's order is refused, with nothing about the order", 
 });
 
 test("R-16: a missing order is refused", () => {
-  expect(revealOrderOnlyToOwner("K-20001", { kind: "not_found" })).toEqual({
-    kind: "refused",
-  });
+  expect(revealOrderOnlyToOwner("K-20001", { kind: "not_found" })).toEqual({ kind: "refused" });
 });
 
 test("R-16: another customer's order and a missing order give the same outcome", () => {
@@ -145,9 +143,9 @@ test("R-16: an unreachable ERP is not a refusal", () => {
 });
 
 test("R-16: the same order is refused for one customer and shown to its owner", () => {
-  const answer = { kind: "found", erpRecord: otherCustomersOrder } as const;
-  expect(revealOrderOnlyToOwner("K-20001", answer)).toEqual({ kind: "refused" });
-  expect(revealOrderOnlyToOwner("K-20002", answer)).toEqual({
+  const orderSearchResult = { kind: "found", erpRecord: otherCustomersOrder } as const;
+  expect(revealOrderOnlyToOwner("K-20001", orderSearchResult)).toEqual({ kind: "refused" });
+  expect(revealOrderOnlyToOwner("K-20002", orderSearchResult)).toEqual({
     kind: "order",
     order: otherCustomersOrder,
   });
@@ -181,7 +179,7 @@ function fakeErp(unreachable: string[] = []) {
         ? { kind: "found", erpRecord: matchingCustomer }
         : { kind: "not_found" };
     },
-    getOrderStatus: async (orderNumber) => {
+    findOrderByNumber: async (orderNumber) => {
       calls.push(`order ${orderNumber}`);
       if (unreachable.includes(orderNumber)) return { kind: "unreachable" };
       const requestedOrder = orders.find(
@@ -198,7 +196,7 @@ function fakeErp(unreachable: string[] = []) {
 test("stage: own order from a registered address", async () => {
   const { erp, calls } = fakeErp();
   const result = await runErpStage(
-    { senderEmailAddress: "m.weber@alpha.example", orderNumbers: ["A-10001"] },
+    { senderEmailAddress: "m.weber@alpha.example", extractedOrderNumbers: ["A-10001"] },
     erp,
   );
   expect(result).toEqual({
@@ -217,7 +215,7 @@ test("stage: own order from a registered address", async () => {
 test("stage R-14: the sender address is looked up in lower case", async () => {
   const { erp, calls } = fakeErp();
   const result = await runErpStage(
-    { senderEmailAddress: "M.Weber@Alpha.example", orderNumbers: [] },
+    { senderEmailAddress: "M.Weber@Alpha.example", extractedOrderNumbers: [] },
     erp,
   );
   expect(result).toEqual({
@@ -231,7 +229,7 @@ test("stage R-14: the sender address is looked up in lower case", async () => {
 test("stage R-14: another contact address of the same customer assigns the same customer", async () => {
   const { erp } = fakeErp();
   const result = await runErpStage(
-    { senderEmailAddress: "einkauf@alpha.example", orderNumbers: [] },
+    { senderEmailAddress: "einkauf@alpha.example", extractedOrderNumbers: [] },
     erp,
   );
   expect(result).toEqual({
@@ -244,7 +242,7 @@ test("stage R-14: another contact address of the same customer assigns the same 
 test("stage R-14, R-15: an unknown sender gets nothing looked up, even for an existing order", async () => {
   const { erp, calls } = fakeErp();
   const result = await runErpStage(
-    { senderEmailAddress: "m.weber@freemail.example", orderNumbers: ["A-10001"] },
+    { senderEmailAddress: "m.weber@freemail.example", extractedOrderNumbers: ["A-10001"] },
     erp,
   );
   expect(result).toEqual({ kind: "unknown_sender" });
@@ -254,7 +252,7 @@ test("stage R-14, R-15: an unknown sender gets nothing looked up, even for an ex
 test("stage R-14: an unreachable ERP at the sender lookup is not an unknown sender", async () => {
   const { erp, calls } = fakeErp(["m.weber@alpha.example"]);
   const result = await runErpStage(
-    { senderEmailAddress: "m.weber@alpha.example", orderNumbers: ["A-10001"] },
+    { senderEmailAddress: "m.weber@alpha.example", extractedOrderNumbers: ["A-10001"] },
     erp,
   );
   expect(result).toEqual({ kind: "unreachable" });
@@ -266,7 +264,7 @@ test("stage R-15, R-16: one outcome per extracted number, in the order the extra
   const result = await runErpStage(
     {
       senderEmailAddress: "m.weber@alpha.example",
-      orderNumbers: ["10002", "A-10003", "A-19999", "1000"],
+      extractedOrderNumbers: ["10002", "A-10003", "A-19999", "1000"],
     },
     erp,
   );
@@ -297,7 +295,7 @@ test("stage R-16: one unreachable order lookup does not affect the others", asyn
   const result = await runErpStage(
     {
       senderEmailAddress: "m.weber@alpha.example",
-      orderNumbers: ["A-10001", "A-10002"],
+      extractedOrderNumbers: ["A-10001", "A-10002"],
     },
     erp,
   );
@@ -319,7 +317,7 @@ test("stage: the same order extracted twice is looked up twice: nothing is merge
   const result = await runErpStage(
     {
       senderEmailAddress: "m.weber@alpha.example",
-      orderNumbers: ["A-10001", "a10001"],
+      extractedOrderNumbers: ["A-10001", "a10001"],
     },
     erp,
   );

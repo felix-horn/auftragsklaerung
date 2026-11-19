@@ -30,7 +30,7 @@ export type ProcessedEmail = {
   // The urgency of the message alone: from its escalation signals and its
   // stated deadline, nothing else (R-13).
   messageUrgency: Urgency;
-  // The ERP lookup: the asking customer, found by the sender address
+  // The ERP lookup: the customer the sender address belongs to
   // (R-14); if found, for each extracted order number (R-15) the order's
   // data or the reason it is not shown, e.g. another customer's order
   // (R-16). Kept apart from the extraction.
@@ -76,7 +76,7 @@ export async function processEmail(
   // The sender address and the extracted order numbers, nothing else:
   // customer numbers from the text never assign the sender (R-14).
   const erpStageResult = await runErpStage(
-    { senderEmailAddress, orderNumbers: extraction.orderNumbers },
+    { senderEmailAddress, extractedOrderNumbers: extraction.orderNumbers },
     erp,
   );
 

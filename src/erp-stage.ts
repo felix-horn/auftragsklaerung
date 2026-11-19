@@ -2,7 +2,7 @@ import type { Customer, Order } from "./erp-contract.js";
 
 // Rules of the ERP stage (CLAUDE.md, ERP stage): who is asking, found by the
 // sender address (R-14); which extracted numbers are looked up (R-15); what
-// the asking customer may see (R-16).
+// the sender's customer may see (R-16).
 // They belong to our code, not to the ERP: the ERP compares addresses
 // exactly, never adds "A-" and returns any order to any caller (CLAUDE.md,
 // Mock ERP).
@@ -69,20 +69,20 @@ export type OrderOutcome =
   | { kind: "unreachable" };
 
 /**
- * R-16: the outcome of one order lookup for the asking customer (R-14).
+ * R-16: the outcome of one order lookup for the sender's customer (R-14).
  * Another customer's order and a missing order give the same outcome, so
  * that no answer reveals which order numbers exist.
  */
 export function revealOrderOnlyToOwner(
-  askingCustomerNumber: string,
-  answer: ErpAnswer<Order>,
+  senderCustomerNumber: string,
+  orderSearchResult: ErpAnswer<Order>,
 ): OrderOutcome {
-  switch (answer.kind) {
+  switch (orderSearchResult.kind) {
     case "found": {
       const isOwnOrder =
-        answer.erpRecord.customerNumber === askingCustomerNumber;
+        orderSearchResult.erpRecord.customerNumber === senderCustomerNumber;
       return isOwnOrder
-        ? { kind: "order", order: answer.erpRecord }
+        ? { kind: "order", order: orderSearchResult.erpRecord }
         : { kind: "refused" };
     }
     case "not_found":
@@ -101,7 +101,7 @@ export interface Erp {
   findCustomerByEmailAddress(
     senderEmailAddress: string,
   ): Promise<ErpAnswer<Customer>>;
-  getOrderStatus(orderNumber: string): Promise<ErpAnswer<Order>>;
+  findOrderByNumber(orderNumber: string): Promise<ErpAnswer<Order>>;
 }
 
 // One extracted order number and its outcome. The number stays as the
@@ -115,7 +115,7 @@ export type OrderLookup = {
 // The result of the ERP stage for one email. "unknown_sender" stands for
 // „Absender ist keinem Kunden zugeordnet.“ and "unreachable" for
 // „Auftragsbestand nicht erreichbar.“ (R-14); in both, nothing was looked
-// up. "assigned" names the asking customer and holds one outcome per
+// up. "assigned" names the sender's customer and holds one outcome per
 // extracted order number, in the order the extraction listed them.
 export type ErpStageResult =
   | { kind: "unknown_sender" }
@@ -123,7 +123,7 @@ export type ErpStageResult =
   | { kind: "assigned"; customerNumber: string; orders: OrderLookup[] };
 
 /**
- * The ERP stage: finds the asking customer by the sender address (R-14),
+ * The ERP stage: finds the customer the sender address belongs to (R-14),
  * then looks up every extracted order number (R-15) and decides what may
  * be shown (R-16).
  *
@@ -132,21 +132,25 @@ export type ErpStageResult =
  * (R-14). Lookups that fail are outcomes, not exceptions.
  */
 export async function runErpStage(
-  input: { senderEmailAddress: string; orderNumbers: string[] },
+  input: { senderEmailAddress: string; extractedOrderNumbers: string[] },
   erp: Erp,
 ): Promise<ErpStageResult> {
-  // An ErpAnswer<Customer>: found (with the customer as erpRecord),
-  // not_found or unreachable.
-  const sender = await erp.findCustomerByEmailAddress(
-    normaliseEmailAddress(input.senderEmailAddress),
-  );
-  if (sender.kind === "not_found") return { kind: "unknown_sender" };
-  if (sender.kind === "unreachable") return { kind: "unreachable" };
+  const { senderEmailAddress, extractedOrderNumbers } = input;
 
-  const { customerNumber } = sender.erpRecord;
+  const senderSearchResult = await erp.findCustomerByEmailAddress(
+    normaliseEmailAddress(senderEmailAddress),
+  );
+  if (senderSearchResult.kind === "not_found") {
+    return { kind: "unknown_sender" };
+  }
+  if (senderSearchResult.kind === "unreachable") {
+    return { kind: "unreachable" };
+  }
+
+  const { customerNumber } = senderSearchResult.erpRecord;
 
   const orders = await Promise.all(
-    input.orderNumbers.map(
+    extractedOrderNumbers.map(
       async (extractedOrderNumber): Promise<OrderLookup> => {
         const normalisedOrderNumber =
           normaliseOrderNumber(extractedOrderNumber);
@@ -154,10 +158,12 @@ export async function runErpStage(
           return { extractedOrderNumber, outcome: { kind: "invalid" } };
         }
 
-        const answer = await erp.getOrderStatus(normalisedOrderNumber);
+        const orderSearchResult = await erp.findOrderByNumber(
+          normalisedOrderNumber,
+        );
         return {
           extractedOrderNumber,
-          outcome: revealOrderOnlyToOwner(customerNumber, answer),
+          outcome: revealOrderOnlyToOwner(customerNumber, orderSearchResult),
         };
       },
     ),

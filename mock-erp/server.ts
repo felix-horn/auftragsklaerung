@@ -45,6 +45,7 @@ export function createMockErp(data: MockErpData): Server {
 
     // "/orders/A-44821" → "A-44821". Taken from the path as sent, without
     // percent-decoding: an order number has only letters, digits and "-".
+    // One order number per request: two orders are two requests.
     const orderPath = url.pathname.match(/^\/orders\/([^/]+)$/);
     if (request.method === "GET" && orderPath) {
       const requestedOrder = data.orders.find(

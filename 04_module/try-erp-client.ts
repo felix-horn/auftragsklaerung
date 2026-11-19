@@ -26,20 +26,20 @@ const lookups = [
   // asks about its two orders; "44100" without prefix gets "A-" (R-15).
   {
     senderEmailAddress: "L.Vogt@kessler-fluidtechnik.example",
-    orderNumbers: ["A-44821", "44100"],
+    extractedOrderNumbers: ["A-44821", "44100"],
   },
   // A contact of K-58047 asks about K-51320's order: refused (R-16).
   {
     senderEmailAddress: "bestellung@wendt-maschinenbau.example",
-    orderNumbers: ["A-44821"],
+    extractedOrderNumbers: ["A-44821"],
   },
   // An address no customer has: unknown sender (R-14).
-  { senderEmailAddress: "info@unbekannt.example", orderNumbers: ["A-44821"] },
+  { senderEmailAddress: "info@unbekannt.example", extractedOrderNumbers: ["A-44821"] },
 ];
 
 console.log(`ERP at ${config.erpBaseUrl}`);
 for (const input of lookups) {
   const result = await runErpStage(input, erp);
-  console.log(`\n${input.senderEmailAddress} asks about ${input.orderNumbers.join(", ")}`);
+  console.log(`\n${input.senderEmailAddress} asks about ${input.extractedOrderNumbers.join(", ")}`);
   console.log(JSON.stringify(result, null, 2));
 }

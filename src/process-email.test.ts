@@ -78,7 +78,7 @@ function fakeErp() {
         ? { kind: "found", erpRecord: matchingCustomer }
         : { kind: "not_found" };
     },
-    getOrderStatus: async (orderNumber) => {
+    findOrderByNumber: async (orderNumber) => {
       calls.push(`order ${orderNumber}`);
       return orderNumber === ownOrder.orderNumber
         ? { kind: "found", erpRecord: ownOrder }

@@ -181,13 +181,13 @@ test("an address no customer has: not_found", async () => {
 
 test("an existing order: found, with the order, whoever owns it", async () => {
   const { erp, problems } = createClientWithProblems(mockUrl);
-  expect(await erp.getOrderStatus("A-10001")).toEqual({
+  expect(await erp.findOrderByNumber("A-10001")).toEqual({
     kind: "found",
     erpRecord: data.orders[0],
   });
   // The client doesn't decide who may see an order: showing an order only
   // to its customer (R-16) is revealOrderOnlyToOwner's job.
-  expect(await erp.getOrderStatus("A-10003")).toEqual({
+  expect(await erp.findOrderByNumber("A-10003")).toEqual({
     kind: "found",
     erpRecord: data.orders[1],
   });
@@ -196,7 +196,7 @@ test("an existing order: found, with the order, whoever owns it", async () => {
 
 test("an order number the ERP doesn't have: not_found", async () => {
   const { erp, problems } = createClientWithProblems(mockUrl);
-  expect(await erp.getOrderStatus("A-99999")).toEqual({ kind: "not_found" });
+  expect(await erp.findOrderByNumber("A-99999")).toEqual({ kind: "not_found" });
   expect(problems).toEqual([]);
 });
 
@@ -205,7 +205,7 @@ test("runErpStage with the client: own order, another customer's, a missing one,
   const result = await runErpStage(
     {
       senderEmailAddress: "Einkauf@Alpha.example",
-      orderNumbers: ["A-10001", "A-10003", "a99999", "K-20001"],
+      extractedOrderNumbers: ["A-10001", "A-10003", "a99999", "K-20001"],
     },
     erp,
   );
@@ -229,7 +229,7 @@ test("runErpStage with the client: own order, another customer's, a missing one,
 
 test("nothing listening: unreachable, no_connection", async () => {
   const { erp, problems } = createClientWithProblems(closedPortUrl);
-  expect(await erp.getOrderStatus("A-10001")).toEqual({ kind: "unreachable" });
+  expect(await erp.findOrderByNumber("A-10001")).toEqual({ kind: "unreachable" });
   expect(problems).toEqual([
     {
       kind: "no_connection",
@@ -242,7 +242,7 @@ test("nothing listening: unreachable, no_connection", async () => {
 
 test("no answer within the timeout: unreachable, timeout", async () => {
   const { erp, problems } = createClientWithProblems(misbehavingUrl, 100);
-  expect(await erp.getOrderStatus("A-50004")).toEqual({ kind: "unreachable" });
+  expect(await erp.findOrderByNumber("A-50004")).toEqual({ kind: "unreachable" });
   expect(problems).toEqual([
     {
       kind: "timeout",
@@ -255,13 +255,13 @@ test("no answer within the timeout: unreachable, timeout", async () => {
 
 test("the body stops halfway: unreachable, timeout, with the status that came", async () => {
   const { erp, problems } = createClientWithProblems(misbehavingUrl, 100);
-  expect(await erp.getOrderStatus("A-50005")).toEqual({ kind: "unreachable" });
+  expect(await erp.findOrderByNumber("A-50005")).toEqual({ kind: "unreachable" });
   expect(problems).toMatchObject([{ kind: "timeout", status: 200 }]);
 });
 
 test("a status the document doesn't list: unreachable, unexpected_status", async () => {
   const { erp, problems } = createClientWithProblems(misbehavingUrl);
-  expect(await erp.getOrderStatus("A-50000")).toEqual({ kind: "unreachable" });
+  expect(await erp.findOrderByNumber("A-50000")).toEqual({ kind: "unreachable" });
   expect(problems).toEqual([
     {
       kind: "unexpected_status",
@@ -274,7 +274,7 @@ test("a status the document doesn't list: unreachable, unexpected_status", async
 
 test("a body that isn't JSON: unreachable, not_json, without quoting the body", async () => {
   const { erp, problems } = createClientWithProblems(misbehavingUrl);
-  expect(await erp.getOrderStatus("A-50001")).toEqual({ kind: "unreachable" });
+  expect(await erp.findOrderByNumber("A-50001")).toEqual({ kind: "unreachable" });
   expect(problems).toEqual([
     {
       kind: "not_json",
@@ -287,7 +287,7 @@ test("a body that isn't JSON: unreachable, not_json, without quoting the body", 
 
 test("an order without status: unreachable, breaks_contract, naming the field", async () => {
   const { erp, problems } = createClientWithProblems(misbehavingUrl);
-  expect(await erp.getOrderStatus("A-50002")).toEqual({ kind: "unreachable" });
+  expect(await erp.findOrderByNumber("A-50002")).toEqual({ kind: "unreachable" });
   expect(problems).toEqual([
     {
       kind: "breaks_contract",
@@ -301,7 +301,7 @@ test("an order without status: unreachable, breaks_contract, naming the field", 
 
 test("a date in the wrong format: breaks_contract, without the value the ERP sent", async () => {
   const { erp, problems } = createClientWithProblems(misbehavingUrl);
-  expect(await erp.getOrderStatus("A-50003")).toEqual({ kind: "unreachable" });
+  expect(await erp.findOrderByNumber("A-50003")).toEqual({ kind: "unreachable" });
   expect(problems).toMatchObject([
     {
       kind: "breaks_contract",
@@ -339,7 +339,7 @@ test("a wrong base URL: unreachable, breaks_contract on the 404, not not_found",
   ).toEqual({
     kind: "unreachable",
   });
-  expect(await erp.getOrderStatus("A-10001")).toEqual({ kind: "unreachable" });
+  expect(await erp.findOrderByNumber("A-10001")).toEqual({ kind: "unreachable" });
   expect(problems.map(describeErpProblem)).toEqual([
     `ERP lookup unusable (breaks_contract): GET ${mockUrl}/api/customers?email=einkauf%40alpha.example → 404: error: Invalid input: expected "no customer with this contact address" (not the documented 404: is ERP_BASE_URL right?)`,
     `ERP lookup unusable (breaks_contract): GET ${mockUrl}/api/orders/A-10001 → 404: error: Invalid input: expected "no order with this number" (not the documented 404: is ERP_BASE_URL right?)`,
@@ -349,7 +349,7 @@ test("a wrong base URL: unreachable, breaks_contract on the 404, not not_found",
 test("runErpStage with a failing order lookup: the outcome carries no details, the problem goes to the reporter", async () => {
   const { erp, problems } = createClientWithProblems(misbehavingUrl);
   const result = await runErpStage(
-    { senderEmailAddress: "einkauf@alpha.example", orderNumbers: ["A-50002"] },
+    { senderEmailAddress: "einkauf@alpha.example", extractedOrderNumbers: ["A-50002"] },
     erp,
   );
   expect(result).toEqual({
