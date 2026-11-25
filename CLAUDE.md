@@ -349,6 +349,7 @@ fake fetch (no API), or in a real run of a 04_module/ script.
 - `npx tsc --noEmit` — type check; the only one
 - `npm run extract:golden-set` — runs the 22 golden-set emails (evals/golden/cases.ts) through the extractor
 - `npm run golden:check` — validates the golden set and reports how many cases are labelled
+- `npm run golden:coverage` — which golden emails exercise each situation of evals/golden/situations.ts, and the situations no email has yet (no API)
 - `npm run dump:reference` — one API call, writes the exact wire payload to
   docs/request-body-reference.json (then `git diff` it; see Conventions)
 - `DUMP_REQUEST_BODY_PATH=<path> npm run dump` — the same to any other file,
@@ -488,26 +489,8 @@ tested in the .test.ts file next to it.
   run instead of combining two evals. The same holds for a repeated eval.
 - 22 cases: one miss moves a field's accuracy (and the case pass rate) by about
   4.5 points. Quote every number with that.
-- Rule coverage (POLICY v1.5 → check → cases that exercise it; R-14 to R-17
-  govern the ERP stage and no golden-set check covers them, see ERP stage):
-  | Rule | Checked by | Cases |
-  |---|---|---|
-  | R-01 | partly: invented values in requestedAction presence, number lists, escalationSignals | E-07, E-13, E-14 |
-  | R-02 | numbers exact, deadline wording; German free text: none | E-16 |
-  | R-03 | intents | E-05, E-19 |
-  | R-04 | intents | E-09, E-16, E-18 |
-  | R-05 | intents | E-04, E-12, E-15, E-22 |
-  | R-06 | requestedAction presence; wording: none | E-11, E-14 |
-  | R-07 | requestedAction presence | E-05, E-19 |
-  | R-08 | orderNumbers | E-02, E-06, E-11 |
-  | R-09 | orderNumbers, customerNumbers | E-04, E-07, E-08, E-16, E-21 |
-  | R-10 | escalationSignals | E-04, E-12, E-13, E-14, E-18 |
-  | R-11 | escalationSignals | E-04, E-08, E-16 |
-  | R-12 | deadlineStated | E-04, E-08, E-10, E-12, E-20 |
-  | R-13 | urgency | all |
-  | Begriffe (instructions inside the message) | intents | E-17 |
-  Not covered: R-02's German free text and the content of requestedAction (only
-  presence is compared), so an invented detail inside a stated action passes.
+- Rule coverage: which situations each email exercises, and the situations no
+  email has yet: Golden set coverage, `npm run golden:coverage`.
 
 ## Noise and comparing runs (Module 3.7)
 
@@ -1358,3 +1341,38 @@ The others wait for the larger golden set (Module 6 onward).
   - Of the six fields disputed in 3.3, E-16 and E-17 intents are missed (E-17 is
     one of the judgment calls); E-02, E-04, E-08 and E-11 were right in all ten
     runs. E-12, which the second annotator marked uncertain, adds `complaint`.
+
+## Golden set coverage
+
+- How the set is built (Felix's idea in Module 2): one email exercises
+  several rules, and one rule is exercised by several emails, each in a
+  different situation.
+- Each case lists the situations it was built for (`exercises` in
+  evals/golden/cases.ts), taken from evals/golden/situations.ts: every
+  situation of POLICY.md's Begriffe and R-01 to R-13 that a golden email can
+  carry, in POLICY.md's order. A situation says what the email contains,
+  never its label, so `exercises` does not give the labeller the answer. The
+  second annotator gets the texts only, never `exercises`.
+- A misspelt situation fails tsc (the case type allows only the listed
+  texts) and the golden set's validation. evals/golden/situations.test.ts
+  checks that each situation names a rule that is a heading in POLICY.md and
+  that the list follows POLICY.md's order.
+- `npm run golden:coverage` (no API): the situations without an email, each
+  situation with its emails, each email with its situations, and the intents
+  and urgency the labels give. Situations without an email are candidates
+  for the larger golden set (Module 6 onward).
+- A situation no email has goes into an existing email first. An email can
+  carry it when the change keeps every situation the email already
+  exercises, touches no number or phrase that POLICY.md quotes as an example
+  (POLICY.md's examples come from the golden emails), and the email is not
+  E-06 (the done-when email). Only when no email can is a new one written,
+  and the commit says why. A changed text rechecks every label of its case
+  and sets policyVersion to the current version (cases.ts header;
+  LABELLING.md, `policyVersion`).
+- A rule change in POLICY.md updates situations.ts and the cases'
+  `exercises` in the same commit.
+- Outside the coverage: the wording of requestedAction is compared present
+  vs null only, so an invented detail inside a stated action passes. R-14 to
+  R-17 decide the ERP stage, which no golden-set check reaches; they are
+  tested in src/erp-stage.test.ts, src/urgency.test.ts and
+  src/process-email.test.ts (ERP stage).

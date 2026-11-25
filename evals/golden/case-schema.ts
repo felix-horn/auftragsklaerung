@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { emailExtractionSchema } from "../../src/schema.js";
+import { situations } from "./situations.js";
 
 // Code values come from the extraction schema, so they cannot drift apart:
 // rename a value there, and every label still using the old one fails to load.
@@ -42,6 +43,11 @@ export const goldenCaseSchema = z
   .strictObject({
     id: z.string().regex(/^E-\d{2}$/),
     email: z.string().min(1),
+    // What the email was built to exercise: situations from situations.ts.
+    exercises: z
+      .array(z.enum(situations))
+      .min(1, { error: "at least one situation" })
+      .refine(hasNoDuplicates, { error: "duplicate situation" }),
     // null = not yet labelled. Labels and policyVersion are set together.
     policyVersion: z
       .string()

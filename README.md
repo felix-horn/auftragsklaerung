@@ -182,6 +182,7 @@ cp .env.example .env   # add ANTHROPIC_API_KEY for the API commands
 | `npm test` | unit tests (vitest) | no |
 | `npx tsc --noEmit` | type check | no |
 | `npm run golden:check` | validates the golden set | no |
+| `npm run golden:coverage` | which golden emails exercise each rule situation, and the gaps | no |
 | `npm run eval:report -- evals/baseline/eval-3.7-repeat10.json` | the ten-run baseline, check by check | no |
 | `npm run erp`, then `npx tsx 04_module/try-erp-client.ts` in a second terminal | the mock ERP, and the ERP stage over HTTP for three senders | no |
 | `npm run erp`, then `npm run process:golden-email -- E-06 einkauf@kessler-fluidtechnik.example` in a second terminal | one golden email through the whole pipeline, as if sent from that address | 1 request, about half a US cent |
