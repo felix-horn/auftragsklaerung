@@ -1,7 +1,7 @@
 # Auftragsklärung — Leitfaden für das Labelling
 
 **Bezieht sich auf:** `docs/POLICY.md` v1.5
-**Stand:** 20.10.2026
+**Stand:** 25.11.2026
 
 > **Note for English-speaking readers.** This is the annotation guide for the
 > golden set used to evaluate the Auftragsklärung system. `docs/POLICY.md`
@@ -143,6 +143,16 @@ mit dem Verb im Infinitiv am Ende: „Liefertermin mitteilen“, „Datenblatt
 zusenden“. Festgehalten wird nur, was der Kunde verlangt (R-01). Mehrere
 Maßnahmen stehen in einem Eintrag, durch Semikolon getrennt. Sonst `null`.
 
+Eine Bestätigung ist eine eigene Maßnahme, wenn der Kunde ausdrücklich
+darum bittet, dass wir eine Maßnahme bestätigen. Es zählt allein, ob die
+Bitte im Text steht, nicht ob wir ohnehin bestätigen würden:
+
+- „Bitte ändern Sie die Liefermenge auf 40 Stück und bestätigen Sie uns die
+  Änderung.“ → „Liefermenge auf 40 Stück ändern; Änderung bestätigen“
+- „Bitte ändern Sie die Liefermenge auf 40 Stück.“ → „Liefermenge auf 40
+  Stück ändern“. Der Kunde erwartet sicher eine Antwort; um eine Bestätigung
+  gebeten hat er aber nicht.
+
 Verglichen wird vorerst nur, ob ein Eintrag vorhanden ist oder `null`, nicht
 sein Wortlaut. Der Eintrag zwingt dazu, die Stelle zu finden, an der der
 Kunde etwas verlangt.
@@ -162,6 +172,10 @@ der Nachricht mehrfach vorkommt. Keine Nummer → `[]`.
 Welche Merkmale vorliegen, entscheiden R-10 und R-11. Eingetragen werden
 ihre Codewerte, als Menge: Reihenfolge ohne Bedeutung, jeder Codewert
 höchstens einmal. Kein Merkmal → `[]`.
+
+Eine Frist ist kein Eskalationsmerkmal. Sie wird unter `deadlineStated`
+eingetragen (R-12); die Dringlichkeit ergibt sich aus beiden Feldern (R-13).
+Warum es keinen Codewert für Fristen gibt: docs/EXPLANATIONS.md.
 
 ### `deadlineStated`
 

@@ -161,25 +161,35 @@ const rawCases: GoldenCaseInput[] = [
   },
   {
     id: "E-08",
-    email: `Guten Tag, wir müssen die Bestellung A-52880 leider stornieren, da sich unser Projekt verschoben hat. Bitte bestätigen Sie die Stornierung bis Freitag. Kundennummer 66017. Mit freundlichen Grüßen, D. Ahrens, Ahrens Anlagenbau`,
+    email: `Guten Tag, wir müssen die Bestellung 52880 leider stornieren, da sich unser Projekt verschoben hat. Bitte bestätigen Sie die Stornierung bis Freitag. Kundennummer 66017. Mit freundlichen Grüßen, D. Ahrens, Ahrens Anlagenbau`,
+    textChanges: [
+      {
+        date: "2026-11-25",
+        change: "„Bestellung A-52880“ → „Bestellung 52880“, for an order number without prefix (R-09, Stufe 2); Module 4.8",
+      },
+    ],
     exercises: [
       "a deadline in the customer's own words (R-02)",
       "a request stated plainly, „bitte …“ (R-06)",
-      "a number with prefix, named to match (R-09, Stufe 1)",
       "a customer number without prefix, named as one (R-09, Stufe 2)",
+      "an order number without prefix, named as one (R-09, Stufe 2)",
       "a cancellation declared outright (R-11)",
       "a date by which the customer wants our answer (R-12)",
       "a deadline as the only signal (R-13)",
     ],
-    policyVersion: "v1.2",
+    policyVersion: "v1.9",
     labels: {
       intents: ["cancellation"],
       requestedAction: "Bestellung stornieren; Stornierung bestätigen",
-      orderNumbers: ["A-52880"],
+      orderNumbers: ["52880"],
       customerNumbers: ["66017"],
       escalationSignals: [],
       deadlineStated: "bis Freitag",
       urgency: "medium",
+    },
+    notes: {
+      requestedAction: "LABELLING.md, requestedAction: eine ausdrücklich erbetene Bestätigung ist eine eigene Maßnahme",
+      escalationSignals: "LABELLING.md, escalationSignals: eine Frist ist kein Eskalationsmerkmal, sie steht in deadlineStated (R-12)",
     },
   },
   {

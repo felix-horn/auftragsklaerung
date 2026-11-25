@@ -43,7 +43,7 @@ E-06 from the golden set:
 > vielen Dank dafür. Bei Bestellung A-44821 warten wir hingegen noch auf eine
 > Versandbestätigung. Können Sie mir den Status nennen? MfG, R. Hoffmann
 
-The extraction as the model returned it in 6 of the 10 baseline runs
+The extraction as the model returned it in 9 of the 10 baseline runs
 (`evals/baseline/`):
 
 ```json
@@ -110,7 +110,7 @@ the lookup rises to medium (R-17).
 | Golden set | 22 German emails as typed TypeScript, Zod-validated on load, labelled from `POLICY.md` alone; each case records the policy version that decided it |
 | Second annotator | Gemini in a fresh session with only `POLICY.md`, `LABELLING.md` and the email texts: 148 of 154 field labels agreed (96.1%) before reconciliation. This measures how clearly the policy decides, not the model. |
 | Checks | 8 per email (schema validity and 7 fields), 176 per run |
-| Ten runs of the unchanged pipeline (02.10.2026) | 145–148 of 154 field comparisons right per run; 15–17 of 22 emails with every field right; 165 of 176 checks right in all ten runs, 6 wrong in all ten, 5 varying |
+| Ten runs of the unchanged pipeline (25.11.2026) | 145–148 of 154 field comparisons right per run; 15–17 of 22 emails with every field right; 165 of 176 checks right in all ten runs, 5 wrong in all ten, 6 varying |
 | Cost | about 12.5 US cents per run of 22 emails, about 0.6 US cents per email (one request to claude-sonnet-5) |
 
 The six checks that are wrong in every run are known. Each has a recorded
@@ -138,7 +138,7 @@ As of 11.11.2026. Built module by module along a self-designed curriculum.
 | 1 | Raw `fetch` against the Anthropic and Gemini HTTP APIs, no SDK: the tool-call loop by hand, token accounting with EUR cost per request, the two providers' token fields compared | done, [first commit](https://github.com/felix-horn/auftragsklaerung/tree/1e3d49e9b46430655098593579184e0a4dbec240) |
 | 2 | Structured outputs and schema design | done, tag `module-2` |
 | 3 | Evals: `POLICY.md`, golden set, promptfoo, noise measurement, CI gate | done, tag `module-3` |
-| 4 | The ERP: ways to use a tool, mock ERP, contract, permission rules, the pipeline end to end | in progress (step 4.7 of 4.9) |
+| 4 | The ERP: ways to use a tool, mock ERP, contract, permission rules, the pipeline end to end | in progress (step 4.8 of 4.9) |
 | 5 | Prompt experiments, each judged against the ten-run baseline | next |
 | 6 | Retrieval over the company's terms of delivery, returns and warranty: pgvector, hybrid search, recall@k | planned |
 | 6b | German reply drafts; an LLM-as-judge rubric in CI | planned |
@@ -183,7 +183,7 @@ cp .env.example .env   # add ANTHROPIC_API_KEY for the API commands
 | `npx tsc --noEmit` | type check | no |
 | `npm run golden:check` | validates the golden set | no |
 | `npm run golden:coverage` | which golden emails exercise each rule situation, and the gaps | no |
-| `npm run eval:report -- evals/baseline/eval-3.7-repeat10.json` | the ten-run baseline, check by check | no |
+| `npm run eval:report -- evals/baseline/eval-4.8-repeat10.json` | the ten-run baseline, check by check | no |
 | `npm run erp`, then `npx tsx 04_module/try-erp-client.ts` in a second terminal | the mock ERP, and the ERP stage over HTTP for three senders | no |
 | `npm run erp`, then `npm run process:golden-email -- E-06 einkauf@kessler-fluidtechnik.example` in a second terminal | one golden email through the whole pipeline, as if sent from that address | 1 request, about half a US cent |
 | `npm run extract:golden-set` | extracts all 22 golden emails | 22 requests, about 12.5 US cents |

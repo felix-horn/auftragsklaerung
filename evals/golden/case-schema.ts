@@ -43,6 +43,15 @@ export const goldenCaseSchema = z
   .strictObject({
     id: z.string().regex(/^E-\d{2}$/),
     email: z.string().min(1),
+    // Changes to the email text since the case was first written, oldest
+    // first. The ID stays; results recorded before a date are about the old
+    // text.
+    textChanges: z
+      .array(
+        z.strictObject({ date: z.iso.date(), change: z.string().min(1) }),
+      )
+      .min(1)
+      .optional(),
     // What the email was built to exercise: situations from situations.ts.
     exercises: z
       .array(z.enum(situations))

@@ -309,8 +309,9 @@ fake fetch (no API), or in a real run of a 04_module/ script.
 
 ## Observed numbers (22-case set, 3.7, ten runs, 02.10.2026)
 
-- Baseline for Open experiments: eval-6y4-2026-10-02T13:59:42 (`--repeat 10`,
-  export in the repo since 3.8: evals/baseline/eval-3.7-repeat10.json), 220
+- Baseline until 25.11.2026: eval-6y4-2026-10-02T13:59:42 (`--repeat 10`; in
+  the repo from 3.8 to 4.8 as evals/baseline/eval-3.7-repeat10.json, since then
+  in git history only), 220
   results, 0 errors. Tokens 429,240 input /
   40,425 output, about 1.26 US dollars.
 - Correct out of 220: schemaValid 220, intents 195, requestedAction 210,
@@ -323,6 +324,34 @@ fake fetch (no API), or in a real run of a 04_module/ script.
 - Of 176 checks per run, 165 were right in all ten runs, 6 wrong in all ten and 5
   changed (Golden set, seen in the 3.7 ten runs). Only the 5 move a run's total;
   the 6 cap it at 148.
+
+## Observed numbers (22-case set, 4.8, ten runs, 25.11.2026)
+
+- Baseline since 25.11.2026: eval-NyC-2026-11-25T12:51:55 (`--repeat 10`,
+  evals/baseline/eval-4.8-repeat10.json), 220 results, 0 errors. Tokens
+  429,230 input / 39,592 output, about 1.25 US dollars, 2 min 5 s. Run because
+  E-08's text changed (Golden set); the pipeline is unchanged since 3.7.
+- Correct out of 220: schemaValid 220, intents 195, requestedAction 211,
+  orderNumbers 199, customerNumbers 210, escalationSignals 220, deadlineStated
+  215, urgency 220. Answers with every check right: 161/220.
+- Per run: field comparisons 147, 148, 145, 148, 147, 146, 147, 148, 147, 147
+  (145–148 of 154, as in 3.7); emails fully right 16, 17, 15, 17, 16, 15, 16,
+  17, 16, 16 (15–17 of 22, as in 3.7).
+- Of 176 checks per run, 165 were right in all ten runs, 5 wrong in all ten and
+  6 changed:
+  - Wrong in all ten: E-07 orderNumbers `["78432"]`; E-16 intents (adds
+    `complaint`; also `other` in 5); E-18 intents (adds `order_status`; once
+    `order_status` alone); E-21 K-62418 in orderNumbers, customerNumbers empty.
+  - Changed between runs: E-08 deadlineStated 8/10 ("Freitag" 2×); E-12 intents
+    6/10 (adds `complaint` 4×); E-12 orderNumbers 9/10 (`[]` 1×); E-12
+    deadlineStated 7/10 ("30.04." 3×); E-14 requestedAction 1/10 (null once;
+    wrong in all ten in 3.7); E-17 intents 9/10 (`other` 1×).
+- E-08 with „Bestellung 52880“ next to „Kundennummer 66017“: orderNumbers
+  `["52880"]` and customerNumbers `["66017"]` in all ten runs, so the model
+  keeps both unprefixed numbers apart (R-09 Stufe 2).
+- Against 3.7, per check with the table (Noise and comparing runs): no check of
+  the 21 unchanged emails moved far enough to count. E-14 requestedAction
+  0/10 → 1/10 and E-12 deadlineStated 4/10 → 7/10 are within chance.
 
 ## Observed numbers (22-case set, CI, from 06.10.2026)
 
@@ -729,9 +758,8 @@ built from 4.3 on.
   ID + invented sender + expected outcome under R-14 to R-17, against invented
   mock ERP data; never derived from labels. One text serves several cases
   (E-06 from the order's owner, from another customer's contact, from an
-  unknown address). Golden-set gap: no email has an order number without
-  prefix that the customer calls an order (R-09 Stufe 2). Candidate E-23,
-  added with the end-to-end eval; the gate then needs a new ten-run baseline.
+  unknown address). An order number without prefix that the customer calls
+  an order (R-09 Stufe 2): E-08 since 4.8 („Bestellung 52880“, Golden set).
 
 ## Mock ERP (Module 4.3)
 
@@ -1133,9 +1161,10 @@ where; the rules are tested next to their functions.
 ## Open experiments
 
 Each changes one thing and is judged per check against the current baseline
-(Noise and comparing runs): the 3.7 ten runs until an experiment is adopted,
-then that experiment's ten runs (CI, evals/baseline/). The target's result in
-the 3.7 baseline is given as right/10. Module 5 of the roadmap runs three of
+(Noise and comparing runs): the 4.8 ten runs (from 25.11.2026; the 3.7 ten
+runs before) until an experiment is adopted, then that experiment's ten runs
+(CI, evals/baseline/). The target's result in the 3.7 baseline is given as
+right/10; where the 4.8 baseline differs, Observed numbers (4.8) says so. Module 5 of the roadmap runs three of
 them, in this order: Prefix assignment, Unnamed numbers, Reason vs. request.
 The others wait for the larger golden set (Module 6 onward).
 
@@ -1172,6 +1201,16 @@ The others wait for the larger golden set (Module 6 onward).
   can only show harm.
 
 ## Deferred design questions
+
+- A check wrong in every baseline run guards nothing (4.8, when the planned
+  end-to-end eval became an end-to-end test). E-16's intents check is wrong in
+  all ten runs because the model adds `complaint`, although `cancellation`
+  is always there. If a change made the model drop `cancellation`, the check
+  would stay wrong and the gate green, and nothing else would notice; R-17's
+  raise for a cancellation is outside the golden set. The general fix is finer
+  checks than one all-or-nothing check per field (for intents, one per
+  intent), decided with the larger golden set (Module 6 onward). Module 5's
+  reason-vs-request experiment targets E-16's added `complaint`.
 
 - The ERP client before a real ERP: a timeout per deployment if a real ERP
   needs more than 5 s (then a second variable in config.ts, with its
@@ -1276,7 +1315,7 @@ The others wait for the larger golden set (Module 6 onward).
   POLICY.md and LABELLING.md were attached as files) and
   docs/second-annotator-3.3-answer.json (Gemini's answer, saved by AI Studio
   as "ai_studio_code (1).txt"). Checked 08.10.2026: the 22 texts are
-  identical to evals/golden/cases.ts, and the answer agrees with today's labels
+  identical to evals/golden/cases.ts (E-08's differs since 25.11.2026), and the answer agrees with today's labels
   in 154/154 field comparisons (requestedAction present vs null), because all
   six differences below were resolved toward its reading. Records only:
   nothing reads them, and they never become prompt material (golden texts
@@ -1328,6 +1367,13 @@ The others wait for the larger golden set (Module 6 onward).
   - Blur: of the six fields disputed in 3.3, only E-16 `intents` is missed, and
     POLICY v1.3 (R-04's example) now decides it word for word. No miss is a blur
     case.
+- E-08's text changed on 25.11.2026 (4.8): „Bestellung A-52880“ → „Bestellung
+  52880“, so an order number without prefix that the customer calls an order
+  (R-09 Stufe 2) has an email; the alternative, a new E-23, was dropped
+  (Golden set coverage). `textChanges` in cases.ts records the change; the ID
+  stays. Relabelled by Felix against v1.9: orderNumbers „52880“, every other
+  label as before. Records before that date describe the old text: the 3.3
+  second annotator, the 3.7 ten runs, CI runs until then.
 - Seen in the 3.7 ten runs (eval-6y4), recorded after the predictions above:
   - Wrong in all ten: E-07 orderNumbers `["78432"]`; E-14 requestedAction
     invented; E-16 intents (adds `complaint`; also `other` in 3); E-18 intents
@@ -1362,13 +1408,15 @@ The others wait for the larger golden set (Module 6 onward).
   and urgency the labels give. Situations without an email are candidates
   for the larger golden set (Module 6 onward).
 - A situation no email has goes into an existing email first. An email can
-  carry it when the change keeps every situation the email already
-  exercises, touches no number or phrase that POLICY.md quotes as an example
+  carry it when the change leaves no situation without an email (E-08 gave
+  up "a number with prefix, named to match", which 11 other emails keep),
+  touches no number or phrase that POLICY.md quotes as an example
   (POLICY.md's examples come from the golden emails), and the email is not
   E-06 (the done-when email). Only when no email can is a new one written,
-  and the commit says why. A changed text rechecks every label of its case
-  and sets policyVersion to the current version (cases.ts header;
-  LABELLING.md, `policyVersion`).
+  and the commit says why. A changed text keeps its ID and gets an entry in
+  `textChanges` (date and change); it rechecks every label of its case and
+  sets policyVersion to the current version (cases.ts header; LABELLING.md,
+  `policyVersion`).
 - A rule change in POLICY.md updates situations.ts and the cases'
   `exercises` in the same commit.
 - Outside the coverage: the wording of requestedAction is compared present
