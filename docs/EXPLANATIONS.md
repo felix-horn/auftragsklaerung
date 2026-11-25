@@ -32,6 +32,7 @@ Entry numbers are IDs, like the rule IDs in `POLICY.md`: they are never renumber
   6. What does the baseline do, and how is it updated after a change?
 - Golden set
   4. What is the difference between `POLICY.md` and `LABELLING.md`?
+  7. Why is a deadline not one of the escalation signals?
 - Extraction
   5. How do we make sure the model's answer fits the schema?
 - How entries get here
@@ -678,6 +679,44 @@ The model sees neither on purpose. `POLICY.md`'s examples come from the golden e
 **Recap in technical terms.** `POLICY.md` is the business specification: versioned, with stable rule IDs, rationale, known gaps and a change log. It is the ground truth the labels are derived from. `LABELLING.md` is the annotation guidelines: recording conventions that make labels from different annotators comparable, plus the procedure for ambiguous cases. Keeping both out of the prompt separates the specification from the implementation under test and prevents label leakage. Inter-annotator agreement measured the specification's clarity before any model was measured against it.
 
 **As of** 08.11.2026, Module 4. `POLICY.md` was v1.3 with R-01 to R-13 at the end of Module 3; by Module 4.5 it is v1.8 with R-14 to R-17 added (roadmap, 05.11.2026). The structure, R-12 and the conventions come from the Module 3.1 and 3.3 chats in which both files were written; the two excerpts are shortened and reworded, not checked against the current files.
+
+### 7. Why is a deadline not one of the escalation signals?
+
+**In short.** A deadline goes into its own field, `deadlineStated`, not into `escalationSignals` as a fifth value. There are two reasons. A deadline has words the clerk needs (until when?), while a signal is only there or not. And a fact stored in two fields can be stored differently in each, so the two would contradict each other. The urgency reads both fields (`POLICY.md` R-13).
+
+**In detail**
+
+**What the four signals are.** `escalationSignals` holds the four Eskalationsmerkmale of `POLICY.md` R-10: `repeat_contact`, `threat_to_cancel`, `production_halt`, `legal_threat`. Each is a yes-or-no fact: the customer wrote it or didn't. A Frist is defined separately, in R-12, and recorded in `deadlineStated` in the customer's own words (R-02), or `null`.
+
+**Reason 1: a deadline carries content.** For a signal, "present" is everything there is to know. For a deadline, the clerk needs to know until when: „bis morgen“ and „innerhalb von drei Werktagen“ are different jobs. A fifth signal `deadline` could only say "there is one", so the words would still need a field of their own.
+
+**Reason 2: one fact, two fields, two answers.** If a deadline were both a signal and a field, a label or a model answer could say yes in one and no in the other:
+
+| `escalationSignals` | `deadlineStated` | What it says |
+|---|---|---|
+| `["deadline"]` | `"bis Freitag"` | consistent: a deadline |
+| `[]` | `null` | consistent: none |
+| `["deadline"]` | `null` | a deadline, but no words for it |
+| `[]` | `"bis Freitag"` | words for a deadline, but no deadline |
+
+For the last two rows, `deriveMessageUrgency` would have to decide which field to believe, and a single mistake would fail two checks in the eval. With one field there is one answer: a message has a Frist exactly when `deadlineStated` isn't `null`, which is what `deriveMessageUrgency` reads (`src/urgency.ts`).
+
+**What is not the reason.** It isn't that a deadline only raises the urgency to medium. A repeat contact also only reaches medium (R-13), and it is a signal. The urgency tiers say how much a fact weighs, not which field it is stored in.
+
+**Examples**, labels from `evals/golden/cases.ts`:
+
+| Email | `escalationSignals` | `deadlineStated` | Urgency (R-13) |
+|---|---|---|---|
+| E-08: „Bitte bestätigen Sie die Stornierung bis Freitag.“ | `[]` | `"bis Freitag"` | medium: a deadline, and no signal |
+| E-18: asked last week already, no deadline | `["repeat_contact"]` | `null` | medium: a repeat contact, and no deadline |
+| E-04: third mail, threatens to cancel, „bis morgen“ | `["repeat_contact", "threat_to_cancel"]` | `"bis morgen"` | high: the threat decides; the deadline and the repeat contact add nothing |
+| E-10: „Lieferung bis zum 15.04.“ | `[]` | `null` | low: a wanted delivery date is not a Frist (R-12) |
+
+**If a deadline should one day appear next to the signals**, for example in the approval queue (Module 8), code derives it from `deadlineStated` when it displays the email. It never becomes a second field that a label or the model fills in.
+
+**Recap in technical terms.** One fact, one field. The schema keeps a categorical enum for the R-10 escalation signals and a nullable verbatim string for the R-12 deadline. A `deadline` enum value would duplicate `deadlineStated !== null` and allow inconsistent states (redundant, denormalised data) that the urgency derivation and the eval would have to resolve. Urgency (R-13) is a pure function of both fields; its tiers weight facts and don't decide where they are stored.
+
+**As of** 25.11.2026, Module 4.8. Checked against `src/schema.ts`, `deriveMessageUrgency` in `src/urgency.ts`, `docs/POLICY.md` R-10, R-12 and R-13, and the labels of E-04, E-08, E-10 and E-18. The split between the two fields was decided in Module 2. The point that the urgency tier is not the reason is Felix's, from the 4.8 chat.
 
 ---
 
